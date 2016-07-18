@@ -1,0 +1,124 @@
+# -*- org-export-babel-evaluate: nil -*-
+#+TITLE: Arthur Krause's LabBook
+#+AUTHOR: Arthur Krause
+#+LATEX_HEADER: \usepackage[margin=2cm,a4paper]{geometry}
+#+STARTUP: overview indent
+#+TAGS: Arthur(A) Lucas(L) noexport(n) deprecated(d)
+#+EXPORT_SELECT_TAGS: export
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+SEQ_TODO: TODO(t!) STARTED(s!) WAITING(w!) | DONE(d!) CANCELLED(c!) DEFERRED(f!)
+
+This document is in English.
+
+* 2016-01-25 First entry (proper emacs configuration file)            :Lucas:
+
+I recommend you use Arnaud's emacs configuration file, available here:
++ http://mescal.imag.fr/membres/arnaud.legrand/misc/init.php
+
+* 2016-07-06 Kickoff meeting (discussion some ideas)           :Arthur:Lucas:
+
+We talk about lots of things with the objective to define the IC topic
+in the context of the HPC4E project. Arthur will write a paragraph
+about the following topics:
+- PAPI (hardware counters in general, tools to trace them)
+- OpenMP specification (for shared memory parallel programming)
+- MPI (for distributed/shared memory - message passing)
+- StarPU (applications are written as a graph of tasks with
+  dependencies)
+
+Deadline: 08/07, meeting will take place at 3PM
+
+* 2016-07-11 Text as requested by Lucas                              :Arthur:
+
+Note: You can use M-q to limit yourself to 80-columns.
+
+Hardware counters are special registers that track events in the
+processor such as cache misses, branch prediction success rate,
+instruction count and memory bandwidth. With this data, it's possible
+to establish a relation between the performance of a program and the
+architecture it is running on. There are various ways to extract their
+data, the most common is through the perf command, but there are
+others. PAPI provides an interface that groups the events in called
+EventSets. With this it's possible to correlate performance drops with
+cache misses or memory bandwith, for example, indicating a
+bottleneck. Intel provides a C++ API called Performance Counter
+Monitor (PCM). With PCM, the programmer is able to access hardware
+counter values directly in the code. There are studies that show the
+possibility to estimate the power used by the processor analyzing a
+small subset of these hardware counters.
+
+OpenMP is an API for multithreading. It allows the programmer to put
+compiler directives inside the code signaling a section that should be
+parallelized, with the advantages of being multiplataform and usable
+on GPGPU. The Message Passing Interface (MPI) is a specification of
+what a message passing interface should do and how it should be
+implemented. There are implementations for nearly all HPC platforms
+and the code is easily portable to any platform that supports
+MPI. StarPU works like a scheduler that assigns tasks to the multiple
+processing units available for the user (e.g. GPU and CPU) given that
+the programmer has written code for that architecture. StarPU can use
+different scheduling policies that takes into account different
+metrics to make its decisions, such as performance or power.
+
+
+
+
+
+* 2016-07-13 Suggestion of initial concepts exploration               :Lucas:
+
+Techniques/Concepts to explore (suggestion):
+
+- How to measure _hardware counters_ (in an Intel arch.)
+- OpenMP: parallel for and task parallelism
+- Write programs using OpenMP
+  - Matrix multiplication (regular load)
+  - Mandelbrot set (irregular load)
+  - Heat transfer
+- Learning about OpenMP (hands-on)
+  - http://openmp.org/mp-documents/omp-hands-on-SC08.pdf
+
+Other topics
+
+- NUMA (a fat node)
+- Consider learning about StarPU
+  - http://starpu.gforge.inria.fr/
+  - Task parallelism
+- Literate programming
+  - https://en.wikipedia.org/wiki/Literate_programming
+  - Donald E. Knuth
+
+* 2016-07-18 Implementing MM (Example of use of Org Mode for coding) :Arthur:
+
+Here's the code of my MM application:
+
+#+begin_src C :results output :session :exports both :tangle mm.c
+#include <stdio.h>
+int main() { return 0; }
+#+end_src
+
+Tangle this file and compile like this:
+
+#+begin_src sh :results output :session :exports both
+gcc mm.c -O3 
+#+end_src
+
+Now, execute this on machine =orion3=.
+
+#+begin_src sh :results output :session :exports both :dir /ssh:orion2:~/
+ls
+#+end_src
+
+#+RESULTS:
+: misc
+
+* 2016-07-18 Meeting with Arthur/Lucas                         :Arthur:Lucas:
+
+HPC4E (Brazil-Europa)
+- http://hpc4e.eu/
+- Collaboration project
+
+CMP134 - Introdução ao Processamento Paralelo e Distribuído
+- https://moodle.inf.ufrgs.br/course/view.php?id=722
+
+CMP134 at Bitbucket
+- https://bitbucket.org/schnorr/cmp134
