@@ -63,7 +63,6 @@ metrics to make its decisions, such as performance or power.
 
 
 
-
 * 2016-07-13 Suggestion of initial concepts exploration               :Lucas:
 
 Techniques/Concepts to explore (suggestion):
@@ -91,16 +90,23 @@ Other topics
 
 Here's the code of my MM application:
 
-#+begin_src C :results output :session :exports both :tangle mm.c
+#+begin_src C :results output :session :exports both :tangle no
 #include <stdio.h>
-int main() { return 0; }
+int main() { 
+printf("oe");
+return 0; }
 #+end_src
+
+#+RESULTS:
+: oe
 
 Tangle this file and compile like this:
 
 #+begin_src sh :results output :session :exports both
-gcc mm.c -O3 
+gcc -o mm  mm.c  
 #+end_src
+
+#+RESULTS:
 
 Now, execute this on machine =orion3=.
 
@@ -122,3 +128,143 @@ CMP134 - Introdução ao Processamento Paralelo e Distribuído
 
 CMP134 at Bitbucket
 - https://bitbucket.org/schnorr/cmp134
+
+* 2016-07-19 Suggested problems implementation using OpenMP          :Arthur:
+  
+** Matrix Multiplication
+
+Here's the Matrix Multiplication code that I've implemented using
+OpenMP
+
+It multiplies two square dynamically generated matrices of doubles.
+It's size can be adjusted by modifying SIZE. Each column or row has SIZE elements.
+
+To test it yourself, start by tangling the MM code
+  
+#+begin_src C :results output :session :exports both :tangle mm.c
+#include <stdio.h>
+#include <stdlib.h>
+#include <omp.h>
+#include <time.h>
+
+#define SIZE 800
+
+double mat1[SIZE][SIZE], mat2[SIZE][SIZE], mat3[SIZE][SIZE];
+
+int main(int argc, char** argv)
+{
+        int row, col;
+        double start_t;
+        if (argc == 1)    omp_set_num_threads(1);
+        else if (argc == 2)    omp_set_num_threads(atoi(argv[1]));
+        else
+        {
+                puts("invalid amount of parameters");
+                return -1;
+        }
+
+        srand(time(NULL));      
+        for (row=0; row<SIZE; row++)
+        {
+                for(col=0; col<SIZE; col++)
+                {
+                        mat1[row][col] = (double)rand() + (double)rand()/(double)RAND_MAX;
+                        mat2[row][col] = (double)rand() + (double)rand()/(double)RAND_MAX;
+                }
+        }
+        start_t = omp_get_wtime();
+
+        #pragma omp parallel
+        { 
+                int i, _col;
+                #pragma omp for
+                for (row=0; row<SIZE; row++)
+                {
+                        for(_col=0; _col<SIZE; _col++)
+                        {
+                                for (i=0; i<SIZE; i++)
+                                        mat3[row][_col] += mat1[row][i] * mat2[i][_col];
+                        }
+                }
+        }
+
+        printf("%f", omp_get_wtime() - start_t);
+}
+
+
+#+end_src
+
+#+RESULTS:
+
+Then, run the following script to compile and test it. It runs the program 5 times for
+each number of threads, from 1 to 4 and stores the results in a .csv file. Each line 
+contains the results for each number of threads. 
+
+#+begin_src sh :results output :session :exports both
+ gcc -fopenmp mm.c
+ mv a.out mm
+ rm mmlog mmlog.csv 
+for j in 1 2 3 4
+do
+ for i in 1 2 3 4 5
+ do
+     ./mm $j >> mmlog
+     echo "," >> mmlog
+ done
+ ./mm $j >> mmlog
+ cat mmlog | tr -d '\n' >> mmlog.csv
+ rm mmlog
+echo "" >> mmlog.csv
+done
+cat mmlog.csv
+#+end_src
+
+
+
+Here are my results running in a Intel Core i5-4210U CPU
+
+: 4.352094,4.362803,4.347984,4.288565,4.358691,4.308480
+: 2.283323,2.296820,2.359130,2.300184,2.366097,2.302083
+: 2.954205,2.466486,2.328566,2.723584,2.918361,2.289822
+: 2.260569,2.251039,2.250062,2.240696,2.284846,2.280797
+*** cpu specs
+Arquitetura:           x86_64
+CPU(s):                4
+On-line CPU(s) list:   0-3
+Thread(s) per núcleo  2
+Núcleo(s) por soquete:2
+Soquete(s):            1
+Nó(s) de NUMA:        1
+Model name:            Intel(R) Core(TM) i5-4210U CPU @ 1.70GHz
+CPU max MHz:           2700,0000
+CPU min MHz:           800,0000
+cache de L1d:          32K
+cache de L1i:          32K
+cache de L2:           256K
+cache de L3:           3072K
+NUMA node0 CPU(s):     0-3
+
+
+
+  
+
+** Mandlebrot set
+
+
+ #+begin_src C :results output :session :exports both :tangle no
+  #include <stdio.h>
+  int main() { return 0; }
+  #+end_src
+
+** Heat transfer
+
+
+ #+begin_src C :results output :session :exports both :tangle no
+  #include <stdio.h>
+  int main() { return 0; }
+  #+end_src
+
+
+
+ 
+
