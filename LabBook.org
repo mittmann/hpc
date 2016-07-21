@@ -256,4 +256,448 @@ NUMA node0 CPU(s):     0-3
 
 
  
+* 2016-07-20 Feedback on Krause's MM implementation                   :Lucas:
 
+Arthur has presented his MM's parallel implementation here:
+- [[*Matrix Multiplication][Matrix Multiplication]]
+
+First, I give you some suggestions about the code:
+
+1. Thinking about reproducibility, you should initialize your matrix
+   always with the same values. So, instead of =srand(time(NULL));=, do
+   something link =srand(0);=, using a constant value. Doing that, at
+   every experimental replication you are sure you have the same
+   scenario.
+2. You probably noticed the long execution time to initialize your
+   matrices. I suggest you to use the following function to generate
+   "random" values:
+   #+begin_src C :results output :session :exports both
+   //next function has been found here:
+   //http://stackoverflow.com/questions/26237419/faster-than-rand
+   //all credits to the authors there
+   static unsigned int g_seed = 0;
+   static inline int fastrand()
+   {
+     g_seed = (214013*g_seed+2531011);
+     return (g_seed>>16)&0x7FFF;
+   }
+   #+end_src
+3. Your code should receive the matrix size as parameter. Keep
+   allocating them in the data segment (as globals); use a upper bound
+   size, make sure the argument is always smaller than that. Note that
+   800 is considered to be small. The performance analysis of your
+   program should contain size as factor.
+4. Regarding the program compilation: use the =-O3= optimization flag to
+   gcc; if you have time, use clang (another compiler) adopting the
+   compiler as a factor for your performance analysis. Show how one
+   compiler's code is faster than the other.
+
+Then, I give some suggestions about the running script:
+
+1. The output of your script should be a CSV in the following format:
+   the first line is the header containing the name of the
+   columns. The rest of the file has the measurements (one single
+   measurement per line). Example of a file considering your scenario:
+   #+BEGIN_EXAMPLE
+   Time, Thread, Size, Compiler
+   4.352094, 1, 800, gcc
+   4.362803, 1, 800, gcc
+   4.347984, 1, 800, gcc
+   4.288565, 1, 800, gcc
+   4.358691, 1, 800, gcc
+   4.308480, 1, 800, gcc
+   #+END_EXAMPLE
+   It's okay to repeat the information.
+2. You can write =for i in `seq 1 5`= instead of what you did.
+3. Everything you echo within the for could be redirected to a file
+   with a single command, like this:
+   #+begin_src sh :results output :session :exports both
+   for i in 1 2 3 4 5
+   do
+      ./mm $j
+      echo ","
+   done >> mmlog
+   #+end_src
+4. Your script should log the details of the experimental platform.
+5. A problem with your script is that you do 5 replications in
+   order. For instance with four threads: you do five replications in
+   a row. You should randomize your experimental design. The best way
+   to do so is not do by yourself, and use R instead (see below a
+   suggestion of design for your case).
+
+Recommendations regarding the experimental setup + other topics:
+
+1. I strongly recommend you to start reading the book of Raj Jain 1991: 
+   *The Art of Computer Systems Performance Analysis*.
+   The INF/UFRGS library has some units. Or google it.
+2. Please, learn about experimental design in this book (full
+   factorial and fractional designs to start with). It is of major
+   importance since you provides you sound experimental data if you
+   correctly apply them.
+3. Tangle the experimental script (but do not commit the tangled file).
+4. Other random questions: there are three for loops: try to
+   parallelize the others. Which for is the best to be parallelized?
+   Try to use other OpenMP schedulers to see which one is best (you
+   can use dynamic, static, guided). For the MM scenario, which one is
+   best? Why?
+
+_A Experimental Design for your MM Scenario_
+
+This is very rough, post questions when in doubt.
+
+In English:
+
+- 10 replications
+- 2 factors (matrix size and number of threads)
+  - matrix size is 400, 800, 1600 (enrich if you want to)
+  - number of threads is 1 (sequential), 2, 4, 8
+    - Sequential should be the code compiled without =-fopenmp=
+- outcomes are the execution time and name of the platform
+- randomize experiments
+
+So, in R:
+
+#+begin_src R :results output :session :exports both
+  require(DoE.base);
+  MM_Scenario <- fac.design (
+           nfactors=2,
+           replications=10,
+           repeat.only=FALSE,
+           blocks=1,
+           randomize=TRUE,
+           seed=10373,
+           nlevels=c(3,4),
+           factor.names=list(
+                size=c(400, 800, 1600),
+                threads=c(1, 2, 4, 8)));
+
+  export.design(MM_Scenario,
+                path=".",
+                filename=NULL,
+                type="csv",
+                replace=TRUE,
+                response.names=c("time","platform"));
+#+end_src
+
+#+RESULTS:
+:  creating full factorial with 12 runs ...
+
+You should have two files now:
+
+#+begin_src sh :results output :session :exports both
+ls MM_Scenario.*
+#+end_src
+
+#+RESULTS:
+: MM_Scenario.csv
+: MM_Scenario.rda
+
+The first one has your experimental design, each line indicating an
+experiment you should run with your MM implementation. Example:
+
+#+begin_src sh :results output :session :exports both
+head MM_Scenario.csv
+#+end_src
+
+#+RESULTS:
+#+begin_example
+"name","run.no.in.std.order","run.no","run.no.std.rp","size","threads","time","platform"
+"1","5",1,"5.1","800","2","",""
+"2","12",2,"12.1","1600","8","",""
+"3","3",3,"3.1","1600","1","",""
+"4","7",4,"7.1","400","4","",""
+"5","10",5,"10.1","400","8","",""
+"6","8",6,"8.1","800","4","",""
+"7","6",7,"6.1","1600","2","",""
+"8","1",8,"1.1","400","1","",""
+"9","9",9,"9.1","1600","4","",""
+#+end_example
+
+You can see they are randomized and there is a bunch of columns.
+
+What you should do:
+
+- Create a bash script that takes the design CSV (=MM_Scenario.csv=) as
+  input, and run your application with the correct factors'
+  values. For the example above, the first execution should be with
+  matrix size of 800, with 2 threads.
+- The output of your script should be the exact values of the input
+  CSV plus the execution time and the platform in the corresponding
+  columns.
+
+See this entry for an example of script:
+- [[*2016-07-20 (Unrelated) Example of experimental bash script][2016-07-20 (Unrelated) Example of experimental bash script]]
+
+* 2016-07-20 (Unrelated) Example of experimental bash script          :Lucas:
+
+Below I show you another project we are playing with for another project:
+- Post your questions when in doubt
+
+#+begin_src sh :results output :session :exports both :tangle scripts/Screening_run.sh
+  #!/bin/bash
+
+  # Screening_run.sh
+
+  # For each line
+  # get the name of the program (column 5)
+  # get the input size (column 6)
+  # Launch the experiment, get execution time
+  # print the line, with the time.
+
+  function usage()
+  {
+      echo "$0 <benchmark> <binary> <design> <unique> <low_freq> <high_freq> <cpus> <notdryrun>";
+      echo "where <benchmark> is one of the supported benchmarks";
+      echo "where <binary> is the string (the command) that will be executed";
+      echo "where <unique> can be any unique identifier you might like";
+  }
+
+  # parameter handling
+  # Check if the benchmark is supported
+  BENCHMARK=$1
+  if [ -n "$BENCHMARK" -a "$BENCHMARK" != "lulesh" -a "$BENCHMARK" != "graph500"  -a "$BENCHMARK" != "minife" ]; then
+      usage;
+      exit;
+  fi
+
+  BINARY=$2
+  if [ -z "$BINARY" ]; then
+      usage;
+      echo "Common commands to be placed in binary:";
+      echo "lulesh: \"./lulesh2.0 -i 1\"";
+      echo "graph500: \"SKIP_VALIDATION=1 ./omp-csr -s 25\"";
+      echo "minife: \"./miniFE.x nx=200\"";
+      exit;
+  fi
+
+  DESIGN=$3
+  if [ -z "$DESIGN" ]; then
+      usage;
+      exit;
+  fi
+  UNIQUE=$4
+  if [ -z "$UNIQUE" ]; then
+      usage;
+      exit
+  fi
+  REDFST_LOW=$5
+  if [ -z "$REDFST_LOW" ]; then
+      usage;
+      exit
+  fi
+  REDFST_HIGH=$6
+  if [ -z "$REDFST_HIGH" ]; then
+      usage;
+      exit
+  fi
+  REDFST_CPUS=$7
+  if [ -z "$REDFST_CPUS" ]; then
+      usage;
+      exit
+  fi
+  NOTDRYRUN=$8
+
+  # Lulesh mapping
+  declare -A regions
+  if [ "$BENCHMARK" = "lulesh" ]; then
+      regions[A]=1
+      regions[B]=2
+      regions[C]=3
+      regions[D]=4
+      regions[E]=5
+      regions[F]=6
+      regions[G]=7
+      regions[H]=8
+      regions[I]=9
+      regions[J]=10
+      regions[K]=11
+      regions[L]=12
+      regions[M]=13
+      regions[N]=14
+      regions[O]=15
+      regions[P]=16
+      regions[Q]=17
+      regions[R]=18
+      regions[S]=19
+      regions[T]=20
+      regions[U]=21
+      regions[V]=22
+      regions[X]=23
+      regions[W]=24
+      regions[Y]=25
+      regions[Z]=26
+      regions[AA]=27
+      regions[BB]=28
+      regions[CC]=29
+      regions[DD]=30
+  elif [ "$BENCHMARK" = "graph500" ]; then
+      # Graph500 mapping
+      regions[A]=0
+      regions[B]=21
+      regions[C]=22
+      regions[D]=24
+      regions[E]=25
+      regions[F]=26
+      regions[G]=27
+      regions[H]=28
+      regions[I]=29
+      regions[J]=30
+      regions[K]=32
+      regions[L]=33
+      regions[M]=34
+      regions[N]=35
+      regions[O]=37
+      regions[P]=41
+      regions[Q]=42
+  elif [ "$BENCHMARK" = "minife" ]; then
+      regions[A]=1
+      regions[B]=2
+      regions[C]=3
+      regions[D]=4
+      regions[E]=5
+      regions[F]=6
+      regions[G]=7
+      regions[H]=8
+      regions[I]=9
+      regions[J]=10
+      regions[K]=11
+      regions[L]=12
+      regions[M]=13
+      regions[N]=14
+      regions[O]=15
+      regions[P]=16
+      regions[Q]=17
+      regions[R]=18
+      regions[S]=19
+      regions[T]=20
+      regions[U]=21
+      regions[V]=22
+      regions[X]=23
+      regions[Y]=24
+      regions[W]=25
+      regions[Z]=26
+  fi
+
+  HOSTNAME=`hostname`
+  export OMP_PROC_BIND=TRUE
+
+  #check if the MSR is loaded
+  if [ `lsmod | grep msr | wc -l` -ne 1 ]; then
+      echo "The =msr= module is not loaded. It should be."
+      usage;
+      exit;
+  fi
+  # disable turbo boost on all cpus
+  # we'll do it for all cores because its easier, but
+  # one core per cpu would make more sense
+  for cpu in $(ls /sys/bus/cpu/devices|sed 's/.*cpu//'); do
+    sudo wrmsr -p${cpu} 0x1a0 0x4000850089
+    if [[ "0" = $(sudo rdmsr -p${cpu} 0x1a0 -f 38:38) ]]; then
+      echo "Failed to disable turbo boost for cpu$cpu. Aborting."
+      exit 1
+    fi
+  done
+
+  #check if cpufreq-info is present
+  if [ -z `which cpufreq-info` ]; then
+      echo "The =cpufreq-info= tool should be available."
+      usage;
+      exit;
+  fi
+
+  #check if high/low limits are within bounds
+  CPUFREQ_INFO=`cpufreq-info -p`
+  echo "cpufreq-info -p informs \"$CPUFREQ_INFO\""
+  CPUFREQ_LOW_LIMIT=`echo $CPUFREQ_INFO | cut -d" " -f1`
+  CPUFREQ_HIGH_LIMIT=`echo $CPUFREQ_INFO | cut -d" " -f2`
+  CPUFREQ_GOVERNOR=`echo $CPUFREQ_INFO | cut -d" " -f3`
+  if [ $REDFST_LOW -gt $REDFST_HIGH ]; then
+      echo "Low frequency $REDFST_LOW is higher than high frequency $REDFST_HIGH.";
+      usage;
+      exit;
+  fi
+  if [ $REDFST_LOW -lt $CPUFREQ_LOW_LIMIT ]; then
+      echo "Low frequency $REDFST_LOW is lower than low limit ($CPUFREQ_LOW_LIMIT) informed by cpufreq-info.";
+      usage;
+      exit;
+  fi
+  if [ $REDFST_HIGH -gt $CPUFREQ_HIGH_LIMIT ]; then
+      echo "High frequency $REDFST_HIGH is higher than high limit ($CPUFREQ_HIGH_LIMIT) informed by cpufreq-info.";
+      usage;
+      exit;
+  fi
+  if [ "$CPUFREQ_GOVERNOR" != "userspace" ]; then
+      echo "The cpufreq governor should be defined as \"userspace\", but is $CPUFREQ_GOVERNOR."
+      usage;
+      exit;
+  fi
+
+
+  #which factors are present in this design (get from first line)
+  FACTORS=`head -n1 $DESIGN | cut -d"," -f5-21 | sed -e "s/\"//g" -e "s/,/ /g"`
+
+  while read -r line; do
+      NAME=`echo $line | cut -d"," -f1 | sed -e "s/\"//g" -e "s/,/ /g"`
+
+
+      LEVELS=`echo $line | cut -d"," -f5-21 | sed -e "s/\"//g" -e "s/,/ /g"`
+      COUNT=`echo $LEVELS | wc -w`
+      #ignore first line
+      if [[ $LEVELS =~ .*[[:alpha:]].* ]]; then
+          #save first line of the design for later
+          FIRSTDESIGNLINE="#G5K_REDFST#$line,unique,low,high,cpus,lowlimit,highlimit,governor,hostname"
+          continue;
+      fi
+
+      echo
+      echo "Starting experiment $NAME"
+      echo "Starting at `date` on $HOSTNAME"
+      echo
+
+      #built LOW and HIGH variables
+      REDFST_FASTREGIONS=
+      REDFST_SLOWREGIONS=
+      for i in `seq 1 $COUNT`; do
+          FACTOR=`echo $FACTORS | cut -d" " -f$i`
+          LEVEL=`echo $LEVELS | cut -d" " -f$i`
+          if [[ $LEVEL =~ -1 ]]; then
+              REDFST_SLOWREGIONS="${regions[$FACTOR]},$REDFST_SLOWREGIONS"
+          elif [[ $LEVEL =~ 1 ]]; then
+              REDFST_FASTREGIONS="${regions[$FACTOR]},$REDFST_FASTREGIONS"
+          fi
+      done
+      #clean-up
+      export REDFST_SLOWREGIONS=`echo $REDFST_SLOWREGIONS | sed "s/,$//"`
+      export REDFST_FASTREGIONS=`echo $REDFST_FASTREGIONS | sed "s/,$//"`
+
+      STDOUT=`tempfile`
+      STDERR=`tempfile`
+      REDFST=`tempfile`
+      REDTRA=`tempfile`
+
+      COMMAND="REDFST_FASTREGIONS=$REDFST_FASTREGIONS REDFST_SLOWREGIONS=$REDFST_SLOWREGIONS REDFST_LOW=$REDFST_LOW REDFST_HIGH=$REDFST_HIGH REDFST_CPUS=$REDFST_CPUS OMP_PROC_BIND=TRUE REDFST_HEADER=1 ${BINARY} 1> $STDOUT 2> $STDERR 3> $REDFST 4> $REDTRA"
+      echo "COMMAND=\"$COMMAND\""
+      if [ "$NOTDRYRUN" ]; then
+          eval $COMMAND
+      fi
+
+      cat $STDOUT | sed "s/^/#STDOUT#/"
+      cat $STDERR | sed "s/^/#STDERR#/"
+
+      #output header
+      echo "$FIRSTDESIGNLINE,`head -n1 $REDFST`"
+      #output measurements
+      cat $REDFST | tail -n+2 | sed "s/^/#REDFST#$line,$UNIQUE,$REDFST_LOW,$REDFST_HIGH,`echo $REDFST_CPUS | sed "s/,/-/g"`,$CPUFREQ_LOW_LIMIT,$CPUFREQ_HIGH_LIMIT,$CPUFREQ_GOVERNOR,$HOSTNAME,/"
+      #output trace
+      cat $REDTRA | sed "s/^/#REDTRA#/"
+
+      rm -f $STDOUT $STDERR $REDFST $REDTRA
+
+      echo
+      echo "Finishing at `date` on $HOSTNAME"
+      echo "Finishing experiment $NAME"
+      echo
+
+  done < $DESIGN
+
+#+end_src
