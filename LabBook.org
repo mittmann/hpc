@@ -701,3 +701,24 @@ Below I show you another project we are playing with for another project:
   done < $DESIGN
 
 #+end_src
+* 2016-07-20 How to avoid =org-babel-load-file= every time Emacs starts :Lucas:
+
+Check:
+- http://mescal.imag.fr/membres/arnaud.legrand/misc/init.html
+
+Note that in the =Installation= section, you have the following lines:
+
+Copy the =init.org= file to here =~/.emacs.d/init.org=.
+http://mescal.imag.fr/membres/arnaud.legrand/misc/init.org
+
+Once you did that, do =org-babel-load-file=. Provide the init.org file
+that is within the =~/.emacs.d/= directory. When you do so, the loading
+of the file creates another file called =init.el=. That file (with all
+the special configurations from Arnaud) should be loaded automatically
+next time you run emacs.
+
+Let me know if that doesn't work for you.
+
+
+
+
