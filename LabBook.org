@@ -62,7 +62,6 @@ metrics to make its decisions, such as performance or power.
 
 
 
-
 * 2016-07-13 Suggestion of initial concepts exploration               :Lucas:
 
 Techniques/Concepts to explore (suggestion):
@@ -130,16 +129,13 @@ CMP134 at Bitbucket
 - https://bitbucket.org/schnorr/cmp134
 
 * 2016-07-19 Suggested problems implementation using OpenMP          :Arthur:
-  
 ** Matrix Multiplication
 
 Here's the Matrix Multiplication code that I've implemented using
-OpenMP
-
-It multiplies two square dynamically generated matrices of doubles.
-It's size can be adjusted by modifying SIZE. Each column or row has SIZE elements.
-
-To test it yourself, start by tangling the MM code
+OpenMP. It multiplies two square dynamically generated matrices of
+doubles.  It's size can be adjusted by modifying SIZE. Each column or
+row has SIZE elements. To test it yourself, start by tangling the MM
+code.
   
 #+begin_src C :results output :session :exports both :tangle mm.c
 #include <stdio.h>
@@ -190,20 +186,19 @@ int main(int argc, char** argv)
 
         printf("%f", omp_get_wtime() - start_t);
 }
-
-
 #+end_src
 
 #+RESULTS:
 
-Then, run the following script to compile and test it. It runs the program 5 times for
-each number of threads, from 1 to 4 and stores the results in a .csv file. Each line 
-contains the results for each number of threads. 
+Then, run the following script to compile and test it. It runs the
+program 5 times for each number of threads, from 1 to 4 and stores the
+results in a .csv file. Each line contains the results for each number
+of threads.
 
 #+begin_src sh :results output :session :exports both
- gcc -fopenmp mm.c
- mv a.out mm
- rm mmlog mmlog.csv 
+gcc -fopenmp mm.c
+mv a.out mm
+rm mmlog mmlog.csv 
 for j in 1 2 3 4
 do
  for i in 1 2 3 4 5
@@ -218,8 +213,6 @@ echo "" >> mmlog.csv
 done
 cat mmlog.csv
 #+end_src
-
-
 
 Here are my results running in a Intel Core i5-4210U CPU
 
@@ -243,10 +236,6 @@ cache de L1i:          32K
 cache de L2:           256K
 cache de L3:           3072K
 NUMA node0 CPU(s):     0-3
-
-
-
-  
 
 ** Mandlebrot set
 
