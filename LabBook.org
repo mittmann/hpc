@@ -138,7 +138,7 @@ row has SIZE elements. To test it yourself, start by tangling the MM
 code.
   
 #+begin_src C :results output :session :exports both :tangle mm.c
-#include <stdio.h>
+#Include <stdio.h>
 #include <stdlib.h>
 #include <omp.h>
 #include <time.h>
@@ -157,6 +157,7 @@ int main(int argc, char** argv)
         {
                 puts("invalid amount of parameters");
                 return -1;
+        
         }
 
         srand(time(NULL));      
@@ -214,6 +215,12 @@ done
 cat mmlog.csv
 #+end_src
 
+#+RESULTS:
+: ,,,,,
+: ,,,,,
+: ,,,,,
+: ,,,,,
+
 Here are my results running in a Intel Core i5-4210U CPU
 
 : 4.352094,4.362803,4.347984,4.288565,4.358691,4.308480
@@ -236,24 +243,6 @@ cache de L1i:          32K
 cache de L2:           256K
 cache de L3:           3072K
 NUMA node0 CPU(s):     0-3
-
-** Mandlebrot set
-
-
- #+begin_src C :results output :session :exports both :tangle no
-  #include <stdio.h>
-  int main() { return 0; }
-  #+end_src
-
-** Heat transfer
-
-
- #+begin_src C :results output :session :exports both :tangle no
-  #include <stdio.h>
-  int main() { return 0; }
-  #+end_src
-
-
 
  
 * 2016-07-20 Feedback on Krause's MM implementation                   :Lucas:
@@ -719,6 +708,73 @@ next time you run emacs.
 
 Let me know if that doesn't work for you.
 
+* 2016-08-01 MM implementation following Lucas' suggested modifications :Arthur: 
 
+This is the code from 2016-07-19 with the following modifications:
+    - rand() is now seeded with 0 instead of time(NULL) in order to
+      achieve better reproducibility having the same numbers in every
+      execution.
+    - the matrix size is now a parameter received from the command
+      line
+#+begin_src C :results output :session :exports both :tangle mm.c
+    
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <omp.h> 
+#include <time.h> 
+ 
+#define MAX_SIZE 1600 
+ 
+double mat1[MAX_SIZE][MAX_SIZE], mat2[MAX_SIZE][MAX_SIZE], mat3[MAX_SIZE][MAX_SIZE]; 
+ 
+int main(int argc, char** argv) 
+{ 
+        int row, col, size; 
+        double start_t; 
+        if (argc == 3)  
+        { 
+                omp_set_num_threads(atoi(argv[1])); 
+                size = atoi(argv[2]); 
+                if (size > MAX_SIZE) 
+                        { 
+                                printf("Maximum matrix size is %d!", MAX_SIZE); 
+                                return -1; 
+                        } 
+        } 
+        else 
+        { 
+                puts("invalid amount of parameters"); 
+                return -1;
+        }
+
+        srand(0);
+        for (row=0; row<size; row++)
+        {
+                for(col=0; col<size; col++)
+                {
+                        mat1[row][col] = (double)rand() + (double)rand()/(double)RAND_MAX;
+                        mat2[row][col] = (double)rand() + (double)rand()/(double)RAND_MAX;
+                }
+        }
+        start_t = omp_get_wtime();
+
+        #pragma omp parallel
+        {
+                int i, _col;
+                #pragma omp for
+                for (row=0; row<size; row++)
+                {
+                        for(_col=0; _col<size; _col++)
+                        {
+                                for (i=0; i<size; i++)
+                                        mat3[row][_col] += mat1[row][i] * mat2[i][_col];
+                        }
+                }
+        }
+
+        printf("%f", omp_get_wtime() - start_t);
+}
+#+end_src
+    
 
 
