@@ -837,13 +837,18 @@ fi
         echo ", $THREADS, $SIZE, gcc"
 done >> log/mmv1.csv
 
+lscpu > log/mmv1_platform.txt
 
 #+end_src
 
 
 And finnaly, let's run the script
 
-#+BEGIN_SRC :results output :session :exports both
-chmod +x scripts/test_mmv1.sh
-./test_mmv1.sh
+#+BEGIN_SRC sh :results output :session :exports both
+  chmod +x scripts/test_mmv1.sh
+  cat scripts/test_mmv1.sh | bash
+  cat log/mmv1.csv
 #+END_SRC
+
+#+RESULTS:
+
