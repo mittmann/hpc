@@ -342,7 +342,7 @@ In English:
 
 So, in R:
 
-#+begin_src R :results output :session :exports both
+#+begin_src R :results output :session *x*:exports both :tangle yes.r
   require(DoE.base);
   MM_Scenario <- fac.design (
            nfactors=2,
@@ -849,6 +849,93 @@ And finnaly, let's run the script
   cat scripts/test_mmv1.sh | bash
   cat log/mmv1.csv
 #+END_SRC
+
+#+RESULTS:
+
+* 2016-08-10 Note on how to install clang with openmp
+
+inside an empty directory:
+$ git clone https://github.com/clang-omp/llvm
+$ git clone https://github.com/clang-omp/compiler-rt llvm/projects/compiler-rt
+$ git clone -b clang-omp https://github.com/clang-omp/clangllvm/tools/clang
+
+go to the llvm/projects folder:
+$ svn co http://llvm.org/svn/llvm-project/openmp/trunk openmp
+$ cd ..
+$ mkdir build && cd build
+$ cmake ../llvm -DCMAKE_COMPILER=gcc> -DCMAKE_CXX_COMPILER=g++
+$ make omp
+
+
+add this to /etc/environment 
+C_INCLUDE_PATH="/home/arthur/openmpclang/llvm/projects/openmp/runtime/exports/common/include"
+CPLUS_INCLUDE_PATH="/home/arthur/openmpclang/llvm/projects/openmp/runtime/exports/common/include"
+LIBRARY_PATH="/home/arthur/openmpclang/llvm/projects/openmp/runtime/exports/lin_32e/lib"
+
+create a random .conf file inside //etc/ld.so.conf.d/ and paste this inside
+<PATH TO THE LLVM DIRECTORY>/llvm/projects/openmp/runtime/exports/lin_32e/lib
+
+$ sudo ldconfig
+
+* 2016-08-10 MM implementation using R and a better bash script :Arthur:
+
+
+
+Use  R to create a test scenario with 512, 724, 1024 and 1448 (each
+have double the number of elements) with 1, 2, 3, 4 and 8 threads (1
+still compiles as a parallel program but with only one thread) and
+running the version compiled with gcc or clang.
+
+#+begin_src R :results output :session :exports both :tangle MM_Scenario.r
+  require(DoE.base);
+  MM_Scenario <- fac.design (
+           nfactors=3,
+           replications=10,
+           repeat.only=FALSE,
+           blocks=1,
+           randomize=TRUE,
+           seed=10373,
+           nlevels=c(4,4,2),
+           factor.names=list(
+                size=c(512, 724, 1024, 1448),
+                threads=c(1, 2, 4, 8),
+                compiler=c("gcc","clang")
+           ));
+
+  export.design(MM_Scenario,
+                path=".",
+                filename=NULL,
+                type="csv",
+                replace=TRUE,
+                response.names=c("time","compiler"));
+#+end_src
+
+#+RESULTS:
+:  creating full factorial with 32 runs ...
+
+The following script runs the test scenario that R created:
+
+#+begin_src bash :results output :session :exports both :tangle scripts/test_mmv1_2.sh
+#!/bin/bash
+gcc -fopenmp -O3 mmv1.c
+mv a.out mmv1_gcc
+clang -fopenmp -O3 mmv1.c
+mv a.out mmv1_clang
+while IFS="," read f1 f2 f3 f4 f5 f6 f7 f8 
+do
+        if [ "$f1" != "\"name\"" ]; then
+                THREADS=${f6//\"/}
+                SIZE=${f5//\"/}
+                if [ "$f7" == "\"gcc\"" ]; then
+                        TIME=$(./mmv1_gcc $THREADS $SIZE)
+                else
+                        TIME=$(./mmv1_clang $THREADS $SIZE)
+                fi
+                echo "$f1,$f2,$f3,$f4,$f5,$f6,$f7,\"$TIME\""
+        fi
+done < MM_Scenario.csv > MM_output.csv
+
+#+end_src
 
 #+RESULTS:
 
