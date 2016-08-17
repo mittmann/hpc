@@ -364,7 +364,26 @@ So, in R:
 #+end_src
 
 #+RESULTS:
-:  creating full factorial with 12 runs ...
+#+begin_example
+Loading required package: DoE.base
+Loading required package: grid
+Loading required package: conf.design
+
+Attaching package: ‘DoE.base’
+
+The following objects are masked from ‘package:stats’:
+
+    aov, lm
+
+The following object is masked from ‘package:graphics’:
+
+    plot.design
+
+The following object is masked from ‘package:base’:
+
+    lengths
+ creating full factorial with 12 runs ...
+#+end_example
 
 You should have two files now:
 
@@ -924,7 +943,7 @@ running the version compiled with gcc or clang.
                 filename=NULL,
                 type="csv",
                 replace=TRUE,
-                response.names=c("time","compiler"));
+                response.names=c("time"));
 #+end_src
 
 #+RESULTS:
@@ -963,14 +982,368 @@ do
                 THREADS=${f6//\"/}
                 SIZE=${f5//\"/}
                 if [ "$f7" == "\"gcc\"" ]; then
-                        TIME=$(./mmv1_gcc $THREADS $SIZE)
+                       TIME=$(./mmv1_gcc $THREADS $SIZE)
                 else
-                        TIME=$(./mmv1_clang $THREADS $SIZE)
+                       TIME=$(./mmv1_clang $THREADS $SIZE)
                 fi
                 echo "$f1,$f2,$f3,$f4,$f5,$f6,$f7,\"$TIME\""
+	  else 
+	      echo "$f1,$f2,$f3,$f4,$f5,$f6,$f7"
         fi
 done < MM_Scenario.csv > MM_output.csv
 
 #+end_src
 
 #+RESULTS:
+
+* 2016-08-17 Plotting the results                                    :Arthur:
+
+#+begin_src bash :results output :session :exports both :tangle scripts/combine_mmv1
+#!/bin/bash
+while IFS="," read f1 f2 f3 f4 f5 f6 f7 f8 
+do
+        if [ "$f1" != "\"name\"" ]; then
+                THREADS=${f6//\"/}
+                SIZE=${f5//\"/}
+		  COMPILER=${f7//\"/}
+		  SET=${f2//\"/}
+		  TIME=${f8//\"/}
+		  
+
+		  TEMP=${TIMES[$SET]}
+		  
+		  TIMES[$SET]=`echo $TEMP + $TIME | bc`
+		   
+               
+                echo ${TIMES[$SET]} a
+	  else 
+	      echo "$f1,$f2,$f3,$f4,$f5,$f6,$f7"
+        fi
+done < MM_output.csv
+#+end_src
+
+#+RESULTS:
+#+begin_example
+"name","run.no.in.std.order","run.no","run.no.std.rp","size","threads","compiler"
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+#+end_example
+
