@@ -1071,3 +1071,28 @@ done
 4.934918
 #+end_example
 
+* 2016-08-18 Feedback                                                 :Lucas:
+
+- you should commit the file =MM_output.csv= to the repository
+  - you may create a =data= directory for that
+- you should not calculate the average by yourself using bash
+  - use R and the =dplyr= package instead
+  - it can be as easy as:
+    #+begin_src R :results output :session :exports both
+    df <- read.csv("measures.csv");
+    #suppose first column has the timings
+    m <- mean(df$times);
+    m
+    #+end_src
+- your =mm.c= is empty:
+  #+begin_src sh :results output
+  cat mm.c
+  #+end_src
+
+  #+RESULTS:
+  : #include <stdio.h>
+  : int main() { return 0; }
+
+  - where is it?
+- Where is the comparison of your =mm.c= compilation using gcc and clang?
+- Get in touch with me more frequently (daily if necessary) to advance faster
