@@ -986,9 +986,9 @@ do
                 else
                        TIME=$(./mmv1_clang $THREADS $SIZE)
                 fi
-                echo "$f1,$f2,$f3,$f4,$f5,$f6,$f7,$TIME\"
+                echo "$f1,$f2,$f3,$f4,$f5,$f6,$f7,$TIME"
 	  else 
-	      echo "$f1,$f2,$f3,$f4,$f5,$f6,$f7"
+	      echo "$f1,$f2,$f3,$f4,$f5,$f6,$f7,$f8"
         fi
 done < MM_Scenario.csv > data/MM_output.csv
 
