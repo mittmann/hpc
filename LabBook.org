@@ -986,11 +986,11 @@ do
                 else
                        TIME=$(./mmv1_clang $THREADS $SIZE)
                 fi
-                echo "$f1,$f2,$f3,$f4,$f5,$f6,$f7,\"$TIME\""
+                echo "$f1,$f2,$f3,$f4,$f5,$f6,$f7,$TIME\"
 	  else 
 	      echo "$f1,$f2,$f3,$f4,$f5,$f6,$f7"
         fi
-done < MM_Scenario.csv > MM_output.csv
+done < MM_Scenario.csv > data/MM_output.csv
 
 #+end_src
 
@@ -1081,9 +1081,18 @@ done
     #+begin_src R :results output :session :exports both
     df <- read.csv("measures.csv");
     #suppose first column has the timings
-    m <- mean(df$times);
+    m <- mean(df$8);
     m
     #+end_src
+
+    #+RESULTS:
+    : Error in file(file, "rt") : não é possível abrir a conexão
+    : Além disso: Warning message:
+    : In file(file, "rt") :
+    :   não foi possível abrir o arquivo 'measures.csv': Arquivo ou diretório não encontrado
+    : Erro: unexpected numeric constant in "    m <- mean(df$8"
+    : [1] NA
+
 - your =mm.c= is empty:
   #+begin_src sh :results output
   cat mm.c
@@ -1096,3 +1105,5 @@ done
   - where is it?
 - Where is the comparison of your =mm.c= compilation using gcc and clang?
 - Get in touch with me more frequently (daily if necessary) to advance faster
+
+
