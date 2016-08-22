@@ -1107,3 +1107,63 @@ done
 - Get in touch with me more frequently (daily if necessary) to advance faster
 
 
+* 2016-08-22 Analysis of =MM_output.csv= file (compiler comparison)     :Lucas:
+
+Understand the data:
+
+#+begin_src R :results output :session :exports both
+df <- read.csv("data/MM_output.csv");
+head(df);
+names(df);
+#+end_src
+
+#+RESULTS:
+#+begin_example
+  name run.no.in.std.order run.no run.no.std.rp size threads compiler     time
+1    1                  14      1          14.1  724       8      gcc 0.331328
+2    2                  32      2          32.1 1448       8    clang 3.861296
+3    3                   8      3           8.1 1448       2      gcc 6.376965
+4    4                  23      4          23.1 1024       2    clang 2.077688
+5    5                  10      5          10.1  724       4      gcc 0.338524
+6    6                  11      6          11.1 1024       4      gcc 1.215392
+[1] "name"                "run.no.in.std.order" "run.no"             
+[4] "run.no.std.rp"       "size"                "threads"            
+[7] "compiler"            "time"
+#+end_example
+
+Calculate the mean:
+
+#+begin_src R :results output :session :exports both
+library(dplyr);
+k <- df %>% select(size, threads, compiler, time) %>% group_by(size, threads, compiler) %>%
+                      summarize(N=n(), mean=mean(time), se=3*sd(time)/sqrt(n())) %>% as.data.frame();
+head(k);
+#+end_src
+
+#+RESULTS:
+:   size threads compiler  N      mean          se
+: 1  512       1    clang 10 0.2847192 0.001748339
+: 2  512       1      gcc 10 0.3152215 0.028917110
+: 3  512       2    clang 10 0.1526065 0.012157844
+: 4  512       2      gcc 10 0.1696786 0.022556112
+: 5  512       4    clang 10 0.1079303 0.009120293
+: 6  512       4      gcc 10 0.1093200 0.011652598
+
+Plot
+
+#+begin_src R :results output graphics :file img/MM_output.png :exports both :width 600 :height 400 :session
+library(ggplot2);
+ggplot(k[k$size == 1448,], aes(x=threads, y=mean, color=compiler)) +
+    geom_point() +
+    geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.2) +
+    theme_bw();
+#    facet_grid(size~compiler, scales="free_y");
+#     theme(legend.position=c(0.9,0.5),
+ #              legend.background = element_rect(fill="gray90", size=.5, linetype="dotted")) + 
+  #   scale_color_discrete(name="Cache Level") + facet_grid(Metric~Application) +
+  #    labs(x = "Runtime (seconds)", y= "Average Cache Misses (%)");
+#+end_src
+
+#+RESULTS:
+[[file:img/MM_output.png]]
+
