@@ -917,8 +917,8 @@ $ sudo ldconfig
 
 
 
-Use  R to create a test scenario with 512, 724, 1024 and 1448 (each
-have double the number of elements) with 1, 2, 3, 4 and 8 threads (1
+Use R to create a test scenario with 512, 724, 1024 and 1448 (each one
+has double the number of elements) with 1, 2, 3, 4 and 8 threads (1
 still compiles as a parallel program but with only one thread) and
 running the version compiled with gcc or clang.
 
@@ -1137,17 +1137,45 @@ Calculate the mean:
 library(dplyr);
 k <- df %>% select(size, threads, compiler, time) %>% group_by(size, threads, compiler) %>%
                       summarize(N=n(), mean=mean(time), se=3*sd(time)/sqrt(n())) %>% as.data.frame();
-head(k);
+k;
 #+end_src
 
 #+RESULTS:
-:   size threads compiler  N      mean          se
-: 1  512       1    clang 10 0.2847192 0.001748339
-: 2  512       1      gcc 10 0.3152215 0.028917110
-: 3  512       2    clang 10 0.1526065 0.012157844
-: 4  512       2      gcc 10 0.1696786 0.022556112
-: 5  512       4    clang 10 0.1079303 0.009120293
-: 6  512       4      gcc 10 0.1093200 0.011652598
+#+begin_example
+   size threads compiler  N       mean          se
+1   512       1    clang 10  0.2847192 0.001748339
+2   512       1      gcc 10  0.3152215 0.028917110
+3   512       2    clang 10  0.1526065 0.012157844
+4   512       2      gcc 10  0.1696786 0.022556112
+5   512       4    clang 10  0.1079303 0.009120293
+6   512       4      gcc 10  0.1093200 0.011652598
+7   512       8    clang 10  0.1124349 0.009786947
+8   512       8      gcc 10  0.1165455 0.008749708
+9   724       1    clang 10  0.9166203 0.001170855
+10  724       1      gcc 10  0.9996797 0.042677035
+11  724       2    clang 10  0.5026853 0.033442052
+12  724       2      gcc 10  0.5256714 0.041661816
+13  724       4    clang 10  0.3435932 0.024998226
+14  724       4      gcc 10  0.3415436 0.026252063
+15  724       8    clang 10  0.3507483 0.018702872
+16  724       8      gcc 10  0.3468855 0.030822741
+17 1024       1    clang 10  3.8464633 0.002203172
+18 1024       1      gcc 10  4.0134046 0.007968973
+19 1024       2    clang 10  2.0854024 0.039283208
+20 1024       2      gcc 10  2.1866821 0.057622485
+21 1024       4    clang 10  1.3218843 0.054698495
+22 1024       4      gcc 10  1.2644383 0.060800525
+23 1024       8    clang 10  1.3078045 0.057953393
+24 1024       8      gcc 10  1.3121323 0.044958083
+25 1448       1    clang 10 11.4506607 0.002331510
+26 1448       1      gcc 10 11.9472751 0.025798115
+27 1448       2    clang 10  6.1661018 0.084228929
+28 1448       2      gcc 10  6.4806272 0.151669038
+29 1448       4    clang 10  3.8284503 0.204192751
+30 1448       4      gcc 10  3.7774774 0.184568996
+31 1448       8    clang 10  4.0827437 0.138143768
+32 1448       8      gcc 10  4.0535519 0.176081777
+#+end_example
 
 Plot
 
@@ -1167,3 +1195,147 @@ ggplot(k[k$size == 1448,], aes(x=threads, y=mean, color=compiler)) +
 #+RESULTS:
 [[file:img/MM_output.png]]
 
+
+ The time for execution reduces almost by half doubling the amount of
+ threads until 4, wich is the numer of cores on the machine used for
+ testing. With 8 threads, the time is greater than with 4 because
+ there is no parallelism gained since there is only 4 cores, and there
+ is more scheduler overhead with 8 than with 4 threads. The scheduler
+ overhead is also the reason for why the time for 2 is a bit greater
+ than half the time for 1 thread. The same thing happens for 4 and 2
+ threads.
+ 
+ The test also reveals a better performance on the program compiled
+ with llvm rather than gcc with -O3 optimization flag set. The llvm
+ compiled program also showed a smaller standar error in the execution
+ time than its counterpart compiled with gcc.
+
+ To check if llvm gained performance with a better optimization we can
+ compile with no compiler optimization at all and check the results.
+ 
+ For this:
+ 
+
+#+begin_src R :results output :session :exports both :tangle MM_Scenario_O0.r
+  require(DoE.base);
+  MM_Scenario_O0 <- fac.design (
+           nfactors=2,
+           replications=10,
+           repeat.only=FALSE,
+           blocks=1,
+           randomize=TRUE,
+           seed=10373,
+           nlevels=c(4,2),
+           factor.names=list(
+                threads=c(1, 2, 4, 8),
+                compiler=c("gcc","clang")
+           ));
+
+  export.design(MM_Scenario_O0,
+                path=".",
+                filename=NULL,
+                type="csv",
+                replace=TRUE,
+                response.names=c("time"));
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Loading required package: DoE.base
+Loading required package: grid
+Loading required package: conf.design
+
+Attaching package: ‘DoE.base’
+
+The following objects are masked from ‘package:stats’:
+
+    aov, lm
+
+The following object is masked from ‘package:graphics’:
+
+    plot.design
+
+The following object is masked from ‘package:base’:
+
+    lengths
+ creating full factorial with 8 runs ...
+#+end_example
+
+
+#+begin_src bash :results output :session :exports both :tangle scripts/test_mmv1_2.sh
+#!/bin/bash
+gcc -fopenmp -O0 mmv1.c
+mv a.out mmv1_O0_gcc
+clang -fopenmp -O0 mmv1.c
+mv a.out mmv1_O0_clang
+while IFS="," read f1 f2 f3 f4 f5 f6 f7 
+do
+        if [ "$f1" != "\"name\"" ]; then
+                COMPILER=${f6//\"/}
+                THREADS=${f5//\"/}
+                TIME=$(./mmv1_O0_$COMPILER $THREADS 1024)
+
+                echo "$f1,$f2,$f3,$f4,$f5,$f6,$TIME"
+	  else 
+	      echo "$f1,$f2,$f3,$f4,$f5,$f6,$f7"
+        fi
+done < MM_Scenario_O0.csv > data/MM_output_O0.csv
+
+rm mmv1_O0_gcc mmv1_O0_clang
+
+#+end_src
+
+#+RESULTS:
+
+ 
+#+begin_src R :results output :session :exports both
+df <- read.csv("data/MM_output_O0.csv");
+head(df);
+names(df);
+#+end_src
+
+#+RESULTS:
+#+begin_example
+  name run.no.in.std.order run.no run.no.std.rp threads compiler      time
+1    1                   4      1           4.1       8      gcc  3.848389
+2    2                   8      2           8.1       8    clang  3.056484
+3    3                   2      3           2.1       2      gcc  7.556800
+4    4                   7      4           7.1       4    clang  3.020419
+5    5                   6      5           6.1       2    clang  6.105754
+6    6                   5      6           5.1       1    clang 11.903840
+[1] "name"                "run.no.in.std.order" "run.no"             
+[4] "run.no.std.rp"       "threads"             "compiler"           
+[7] "time"
+#+end_example
+
+#+begin_src R :results output :session :exports both
+library(dplyr);
+k <- df %>% select(threads, compiler, time) %>% group_by(threads, compiler) %>%
+                      summarize(N=n(), mean=mean(time), se=3*sd(time)/sqrt(n())) %>% as.data.frame();
+k;
+#+end_src
+
+#+RESULTS:
+:   threads compiler  N      mean          se
+: 1       1    clang 10 11.909524 0.003175097
+: 2       1      gcc 10 14.856414 0.003287345
+: 3       2    clang 10  6.104234 0.004152455
+: 4       2      gcc 10  7.565980 0.016595808
+: 5       4    clang 10  3.173850 0.130747388
+: 6       4      gcc 10  4.069532 0.148892384
+: 7       8    clang 10  3.164443 0.109269834
+: 8       8      gcc 10  4.086618 0.175229557
+
+#+begin_src R :results output graphics :file img/MM_output_O0.png :exports both :width 600 :height 400 :session
+library(ggplot2);
+ggplot(aes(x=threads, y=mean, color=compiler)) +
+    geom_point() +
+    geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.2) +
+    theme_bw();
+#+end_src
+
+#+RESULTS:
+[[file:img/MM_output_O0.png]]
+
+ The program compilated with llvm is still better than the one
+ compiled with gcc for this MM implementation
