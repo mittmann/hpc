@@ -800,7 +800,7 @@ mkdir scripts
 Now, tangle the following script that will compile and run the program
 with different thread amounts and matrix sizes and store the results
 
-#+begin_src sh :results output :session :exports both :tangle scripts/test_mmv1.sh
+#+begin_src sh :results output :session :exports both :tangle no
 #!/bin/sh
 #!/bin/bash
 
@@ -986,7 +986,7 @@ done < MM_Scenario.csv > data/MM_output.csv
 The following script will parse the test output for 32 different
 combinations of tests and calculate the mean between the results
 
-#+begin_src bash :results output :session :exports both :tangle scripts/combine_mmv1
+#+begin_src bash :results output :session :exports both :tangle no
 #!/bin/bash
 while IFS="," read f1 f2 f3 f4 f5 f6 f7 f8 
 do
@@ -1155,7 +1155,7 @@ ggplot(k, aes(x=as.factor(threads), y=mean, color=compiler)) +
  compile with no compiler optimization at all and check the results.
  
  For this:
-#+begin_src R :results output :session :exports both :tangle MM_Scenario_O0.r
+#+begin_src R :results output :session :exports both :tangle no
   require(DoE.base);
   MM_Scenario_O0 <- fac.design (
            nfactors=2,
@@ -1201,7 +1201,7 @@ The following object is masked from ‘package:base’:
 #+end_example
 
 
-#+begin_src bash :results output :session :exports both :tangle scripts/test_mmv1_2.sh
+#+begin_src bash :results output :session :exports both :tangle no
 #!/bin/bash
 gcc -fopenmp -O0 mmv1.c
 mv a.out mmv1_O0_gcc
@@ -1333,3 +1333,143 @@ Several possibilities:
   https://github.com/lfgmillani/reppar2016
 ** Conduct a state of the art investigation
 Search for "performance regression test" for the applications listed previously.
+* 2016-09-21 Testing the MM with variable optimization levels        :Arthur:
+
+I had removed the size factor in the previous test because the llvm
+version had better performance with all sizes and, in order to reduce
+the running time, I opted to test only for 1024x1024 matrices because
+I tought that would be enough to find out if the different
+optimization was the reason for the shorter execution time.
+
+But anyways, here is the DoE with size and optimization levels as
+factors:
+** DoE
+#+begin_src R :results output :session :exports both :tangle MM_Scenario.r
+  require(DoE.base);
+  MM_Scenario <- fac.design (
+           nfactors=4,
+           replications=20,
+           repeat.only=FALSE,
+           blocks=1,
+           randomize=TRUE,
+           seed=10373,
+           nlevels=c(4,4,4,2),
+           factor.names=list(
+                size=c(512, 724, 1024, 1448),
+                threads=c(1, 2, 4, 8),
+                optimization=c("O0", "O1", "O2", "O3"),
+                compiler=c("gcc","clang")
+           ));
+
+  export.design(MM_Scenario,
+                path=".",
+                filename=NULL,
+                type="csv",
+                replace=TRUE,
+                response.names=c("time"));
+#+end_src
+
+#+RESULTS:
+:  creating full factorial with 128 runs ...
+
+** Script for testing
+#+begin_src bash :results output :session :exports both :tangle scripts/test_mmv1.sh
+#!/bin/bash
+gcc -fopenmp -O0 mmv1.c
+mv a.out mmv1_gcc_O0
+gcc -fopenmp -O1 mmv1.c
+mv a.out mmv1_gcc_O1
+gcc -fopenmp -O2 mmv1.c
+mv a.out mmv1_gcc_O2
+gcc -fopenmp -O3 mmv1.c
+mv a.out mmv1_gcc_O3
+clang -fopenmp -O0 mmv1.c
+mv a.out mmv1_clang_O0
+clang -fopenmp -O1 mmv1.c
+mv a.out mmv1_clang_O1
+clang -fopenmp -O2 mmv1.c
+mv a.out mmv1_clang_O2
+clang -fopenmp -O3 mmv1.c
+mv a.out mmv1_clang_O3
+while IFS="," read f1 f2 f3 f4 f5 f6 f7 f8 f9
+do
+        if [ "$f1" != "\"name\"" ]; then
+                THREADS=${f6//\"/}
+                SIZE=${f5//\"/}
+		  OPTIMIZATION=${f7//\"/}
+                if [ "$f7" == "\"gcc\"" ]; then
+                       TIME=$(./mmv1_gcc_$OPTIMIZATION $THREADS $SIZE)
+                else
+                       TIME=$(./mmv1_clang_$OPTIMIZATION $THREADS $SIZE)
+                fi
+                echo "$f1,$f2,$f3,$f4,$f5,$f6,$f7,$f8,$TIME"
+	  else 
+	      echo "$f1,$f2,$f3,$f4,$f5,$f6,$f7,$f8,$f9"
+        fi
+done < MM_Scenario.csv > data/MM_output.csv
+rm -rf mmv1_gcc_*
+rm -rf mmv1_clang_*
+
+#+end_src
+
+** Plotting the results
+
+I'm not sure about how to plot these results. The more obvious for me are:
+
+- y=time x=optimization, with fixed matrix size and thread amount,
+  compare the execution time difference with compiling optimization
+  for each compiler
+- y=time x=threads, with fixed matrix size and one grahp for each
+  optimization level, compare the performance gain with increased
+  threads for each compiler with different optimization levels
+ 
+Executing the second one:
+
+#+begin_src R :results output :session :exports both
+df <- read.csv("data/MM_output.csv");
+head(df);
+library(dplyr);
+k <- df %>% select(threads, compiler,optimization, size, time) %>% group_by(threads, compiler, optimization, size) %>%
+                      summarize(N=n(), mean=mean(time), se=3*sd(time)/sqrt(n())) %>% as.data.frame();
+#+end_src
+
+#+RESULTS:
+#+begin_example
+  name run.no.in.std.order run.no run.no.std.rp size threads optimization
+1    1                  53      1          53.1  512       2           O3
+2    2                  58      2          58.1  724       4           O3
+3    3                  33      3          33.1  512       1           O2
+4    4                  97      4          97.1  512       1           O2
+5    5                  42      5          42.1  724       4           O2
+6    6                  49      6          49.1  512       1           O3
+  compiler     time
+1      gcc 0.180559
+2      gcc 0.487900
+3      gcc 0.294018
+4    clang 0.296790
+5      gcc 0.532352
+6      gcc 0.302880
+#+end_example
+
+#+begin_src R :results output graphics :file img/MM_output.pdf :exports both :session
+df <- read.csv("data/MM_output.csv");
+library(dplyr);
+k <- df %>% select(threads, compiler, optimization, size, time) %>% group_by(threads, compiler, optimization, size) %>%
+                      summarize(N=n(), mean=mean(time), se=3*sd(time)/sqrt(n())) %>% as.data.frame();
+library(ggplot2);
+a <- k[k$size==1024,]
+ggplot(a, aes(x=as.factor(threads), y=mean, color=compiler, group=optimization)) +
+    geom_point() +
+    geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.2) +
+    theme_bw(base_size = 14) +
+    ylim(0,NA) +
+    ylab ("Runtime (seconds)") +
+    xlab ("Number of threads") +
+    scale_color_discrete (name="Compiler") +
+    facet_wrap(~optimization) +
+    theme(legend.position="top");
+#+end_src
+
+#+RESULTS:
+[[file:img/MM_output.pdf]]
+
