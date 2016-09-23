@@ -1443,12 +1443,22 @@ k <- df %>% select(threads, compiler,optimization, size, time) %>% group_by(thre
 5    5                  42      5          42.1  724       4           O2
 6    6                  49      6          49.1  512       1           O3
   compiler     time
-1      gcc 0.180559
-2      gcc 0.487900
-3      gcc 0.294018
-4    clang 0.296790
-5      gcc 0.532352
-6      gcc 0.302880
+1      gcc 0.144429
+2      gcc 0.314401
+3      gcc 0.286600
+4    clang 0.286353
+5      gcc 0.345997
+6      gcc 0.286512
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
 #+end_example
 
 #+begin_src R :results output graphics :file img/MM_output.pdf :exports both :session
@@ -1457,7 +1467,7 @@ library(dplyr);
 k <- df %>% select(threads, compiler, optimization, size, time) %>% group_by(threads, compiler, optimization, size) %>%
                       summarize(N=n(), mean=mean(time), se=3*sd(time)/sqrt(n())) %>% as.data.frame();
 library(ggplot2);
-a <- k[k$size==1024,]
+a <- k[k$size==1448,]
 ggplot(a, aes(x=as.factor(threads), y=mean, color=compiler, group=optimization)) +
     geom_point() +
     geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.2) +
@@ -1473,3 +1483,76 @@ ggplot(a, aes(x=as.factor(threads), y=mean, color=compiler, group=optimization))
 #+RESULTS:
 [[file:img/MM_output.pdf]]
 
+ This graph was not effective in showing differences between the
+ compilers, so let's try to plot the percentual differences between
+ the execution times.
+
+ I couldn't do it. Could you help me, Lucas?
+
+
+* 2016-09-23 New DoE considering cache misses                        :Arthur: 
+#+begin_src R :results output :session :exports both :tangle MM_Scenario.r
+  require(DoE.base);
+  MM_Scenario_2 <- fac.design (
+           nfactors=4,
+           replications=15,
+           repeat.only=FALSE,
+           blocks=1,
+           randomize=TRUE,
+           seed=10373,
+           nlevels=c(4,6,4,2),
+           factor.names=list(
+                size=c(512, 1024, 2048, 4096),
+                threads=c(1, 2, 4, 8, 16, 32),
+                optimization=c("O0", "O1", "O2", "O3"),
+                compiler=c("gcc","clang")
+           ));
+
+  export.design(MM_Scenario_2,
+                path=".",
+                filename=NULL,
+                type="csv",
+                replace=TRUE,
+                response.names=c("time", "L2.misses", "L3.misses"));
+#+end_src
+
+#+RESULTS:
+:  creating full factorial with 192 runs ...
+
+
+The initial idea to count cache misses is through the perf utility, as
+the example below
+
+The output here in the LabBook is not the same when run directly into
+bash, though
+#+begin_src bash :results output :session :exports both
+perf stat -B -e cache-references,cache-misses,L1-dcache-load-misses,LLC-loads-misses,cycles,instructions,branches ./mmv1_gcc 1 1000
+#+end_src
+
+#+RESULTS:
+: 13.837267
+
+    
+
+
+Performance counter stats for './mmv1_gcc 32 1600':
+
+    63.107.326.309 L1-dcache-loads                                              [22,99%]
+     8.406.134.775 L1-dcache-stores                                             [35,43%]
+     4.117.398.031 L1-dcache-load-misses     #    6,52% of all L1-dcache hits   [47,87%]
+         3.071.692 L1-dcache-store-misses                                       [49,87%]
+     4.148.736.630 LLC-loads                                                    [45,90%]
+         1.302.953 LLC-stores                                                   [10,11%]
+        55.854.974 LLC-loads-misses          #    1,35% of all LL-cache hits    [10,27%]
+           561.544 LLC-stores-misses                                            [10,53%]
+
+       3,839903229 seconds time elapsed
+
+
+The plan was to subtract the L1 misses from the LLC loads and stores
+in order to get the number of L2 hits, the problem is that it yields a
+negative number, so this data is obviously incorrect.
+
+     
+ 
+ Is this correct, Lucas? Could you point me to a better way of getting this data?
