@@ -882,7 +882,7 @@ particular to one scenario.
 inside an empty directory:
 $ git clone https://github.com/clang-omp/llvm
 $ git clone https://github.com/clang-omp/compiler-rt llvm/projects/compiler-rt
-$ git clone -b clang-omp https://github.com/clang-omp/clangllvm/tools/clang
+$ git clone -b clang-omp https://github.com/clang-omp/clang lvm/tools/clang
 
 go to the llvm/projects folder:
 $ svn co http://llvm.org/svn/llvm-project/openmp/trunk openmp
@@ -1490,7 +1490,7 @@ ggplot(a, aes(x=as.factor(threads), y=mean, color=compiler, group=optimization))
  I couldn't do it. Could you help me, Lucas?
 
 * 2016-09-23 New DoE considering cache misses                        :Arthur: 
-#+begin_src R :results output :session :exports both :tangle MM_Scenario.r
+#+begin_src R :results output :session :exports both :tangle MM_Scenario_2.r
   require(DoE.base);
   MM_Scenario_2 <- fac.design (
            nfactors=4,
@@ -1565,17 +1565,15 @@ directly to the machine's IP address.
 
 We need to try to get the IP until it works
 
-#+BEGIN_SRC sh :results output :session
+#+BEGIN_SRC sh :results output :session *a*:
 nslookup beagle1
 #+END_SRC
 
 #+RESULTS:
 : Server:		127.0.1.1
-: Address:	127.0.1.1#53
+: 53
 : 
-: Name:	beagle1.inf.ufrgs.br
-: Address: 143.54.12.87
-: 
+: ** server can't find beagle1: NXDOMAIN
 
 After some investigation, I decided to try and use "L2 _RQSTS _MISS"
 as the number of L2 cache misses and "MEM _LOAD _UOPS _RETIRED _L3
@@ -1590,3 +1588,124 @@ likwid-perfctr -f -c N:0-31 -g L2CACHE -g L3CACHE ./mmv1 32 3600 | grep -E 'MEM_
 : 30356471991, 173475
 
 Next steps are to install clang/llvm in beagle1 and design a complete test.
+* 2016-09-30 Note on problems found trying to run the tests on beagle1 :Arthur:
+-There is no OpenMP for llvm installed
+
+-Cmake version is too old to compile a local version of llvm/openmp
+(it's 2.8.7, needs to be at leas 2.8.8)
+
+-I have no privilege within the machine to update cmake
+
+-GCC version is too old to compile an updated version of cmake (it's
+4.6.3 while it needs to be at least 4.7)
+
+* 2016-09-30 Testing the MM on beagle1 for time and cache misses     :Arthur: 
+
+** DoE
+Since it's not possible to get the execution time while running the
+program through likwid, time and cache misses must be tested
+independently, so the test output will be a factor in the DoE
+
+#+begin_src R :results output :session :exports both :tangle MM_Scenario_3.r
+  require(DoE.base);
+  MM_Scenario_3 <- fac.design (
+           nfactors=5,
+           replications=10,
+           repeat.only=FALSE,
+           blocks=1,
+           randomize=TRUE,
+           seed=10373,
+           nlevels=c(5,6,4,2,2),
+           factor.names=list(
+                size=c(512, 724, 1024, 1448, 2048),
+                threads=c(1, 2, 4, 8, 16, 32),
+                optimization=c("O0", "O1", "O2", "O3"),
+                compiler=c("gcc","clang"),
+                test=c("time","cache")
+           ));
+
+  export.design(MM_Scenario_3,
+                path=".",
+                filename=NULL,
+                type="csv",
+                replace=TRUE,
+                response.names=c("time", "L2.misses", "L3.misses"));
+#+end_src
+
+#+RESULTS:
+:  creating full factorial with 480 runs ...
+
+
+** Script
+First we get the IP address 
+
+#+BEGIN_SRC sh :results output :session *a*
+nslookup beagle1
+#+END_SRC
+
+#+RESULTS:
+: Server:		127.0.1.1
+: 53
+: 
+: Name:	beagle1.inf.ufrgs.br
+: Address: 143.54.12.87
+
+Then we send our DoE and code to beagle1
+
+#+begin_src bash :results output :session :exports both
+scp MM_Scenario_3.csv aulapinroot@143.54.12.87:~/arthur/exp
+scp mmv1.c aulapinroot@143.54.12.87:~/arthur/exp
+#+end_src
+
+#+RESULTS:
+
+
+
+Now the test itself
+
+ #+begin_src bash :results output :session :exports both :tangle scripts/test_mmv1_3.sh :dir /ssh:aulapinroot@143.54.12.87:~/arthur/exp
+#!/bin/bash
+for i in `seq 0 3`
+do
+gcc -fopenmp -O$i mmv1.c
+mv a.out mmv1_gcc_O$i
+#clang -fopenmp -O$i mmv1.c
+#mv a.out mmv1_clang_O$i
+done
+
+while IFS="," read f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11 f12
+do
+        if [ "$f1" != "\"name\"" ]; then #if its not the first line
+                
+	          SIZE=${f5//\"/}
+	          THREADS=${f6//\"/}                
+		  OPTIMIZATION=${f7//\"/}
+		  COMPILER=${f8//\"/}
+		  if [ $COMPILER == gcc ]; then ##### REMOVE THIS LINE WHEN LLVM IS PROPERLY INSTALLED
+		      if [ "$f9" == "\"time\"" ]; then
+			  TIME=$(./mmv1_$COMPILER\_$OPTIMIZATION $THREADS $SIZE)
+			  echo "$f1,$f2,$f3,$f4,$f5,$f6,$f7,$f8,$f9,$TIME,$f11,$f12"
+		      else
+			  CACHE=$(likwid-perfctr -f -c N:0-31 -g L2CACHE -g L3CACHE ./mmv1_$COMPILER\_$OPTIMIZATION $THREADS $SIZE | grep -E 'MEM_LOAD_UOPS_RETIRED_L3_MISS STAT|L2_RQSTS_MISS STAT' | awk '{temp=$7; getline; print temp ", " $7;}')
+			  echo "$f1,$f2,$f3,$f4,$f5,$f6,$f7,$f8,$f9,$f10,$CACHE"
+		      fi             
+		  fi ##### REMOVE THIS LINE WHEN LLVM IS PROPERLY INSTALLED
+        else 
+	      #if its the first line just repeat it
+	      echo "$f1,$f2,$f3,$f4,$f5,$f6,$f7,$f8,$f9,$f10,$f11,$f12" 
+        fi
+done < MM_Scenario_3.csv > data/MM_output_3.csv
+rm -rf mmv1_gcc_*
+rm -rf mmv1_clang_*
+#send the results to my local machine
+scp ../data/MM_output_3.csv arthur@krause:~hpc/data
+
+#+end_src
+
+ #+RESULTS:
+
+
+ 
+
+
+
