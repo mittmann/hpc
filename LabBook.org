@@ -1640,15 +1640,18 @@ independently, so the test output will be a factor in the DoE
 First we get the IP address 
 
 #+BEGIN_SRC sh :results output :session *a*
+until nslookup beagle1 > /dev/null; do :; done
 nslookup beagle1
 #+END_SRC
 
 #+RESULTS:
-: Server:		127.0.1.1
+: 
+: $ $ Server:		127.0.1.1
 : 53
 : 
 : Name:	beagle1.inf.ufrgs.br
 : Address: 143.54.12.87
+
 
 Then we send our DoE and code to beagle1
 
@@ -1686,7 +1689,7 @@ do
 			  TIME=$(./mmv1_$COMPILER\_$OPTIMIZATION $THREADS $SIZE)
 			  echo "$f1,$f2,$f3,$f4,$f5,$f6,$f7,$f8,$f9,$TIME,$f11,$f12"
 		      else
-			  CACHE=$(likwid-perfctr -f -c N:0-31 -g L2CACHE -g L3CACHE ./mmv1_$COMPILER\_$OPTIMIZATION $THREADS $SIZE | grep -E 'MEM_LOAD_UOPS_RETIRED_L3_MISS STAT|L2_RQSTS_MISS STAT' | awk '{temp=$7; getline; print temp ", " $7;}')
+			  CACHE=$(likwid-perfctr -f -c N:0-31 -g L2CACHE -g L3CACHE ./mmv1_$COMPILER\_$OPTIMIZATION $THREADS $SIZE | grep -E 'MEM_LOAD_UOPS_RETIRED_L3_MISS STAT|L2_RQSTS_MISS STAT' | awk '{temp=$7; getline; print temp "," $7;}')
 			  echo "$f1,$f2,$f3,$f4,$f5,$f6,$f7,$f8,$f9,$f10,$CACHE"
 		      fi             
 		  fi ##### REMOVE THIS LINE WHEN LLVM IS PROPERLY INSTALLED
@@ -1697,15 +1700,72 @@ do
 done < MM_Scenario_3.csv > data/MM_output_3.csv
 rm -rf mmv1_gcc_*
 rm -rf mmv1_clang_*
-#send the results to my local machine
-scp ../data/MM_output_3.csv arthur@krause:~hpc/data
 
 #+end_src
 
  #+RESULTS:
 
+Getting the output
 
+#+begin_src bash :results output :session :exports both
+scp aulapinroot@143.54.12.87:~/arthur/exp/MM_output_3.csv /data/MM_output_3.csv
+#+end_src
  
 
 
 
+
+
+** Plot
+             
+The following R code should calculate the mean values and standard
+error for the measured data and agreggate it into a single data frame.
+
+If it takes too long, close emacs and try again
+            
+#+begin_src R :results output :session *a* :exports both
+
+library(dplyr)
+df <- read.csv("data/MM_output_3.csv");
+k <- df %>% select(size, threads, optimization, compiler, test, time, L2.misses, L3.misses) %>% 
+     filter(df$test=='time') %>%
+     group_by(size, threads,  optimization, compiler) %>%
+     summarize(m.time=mean(time), m.time.se=3*sd(time)/sqrt(n())) %>%
+     as.data.frame()
+
+g <- df %>% select(size, threads, optimization, compiler, test, time, L2.misses, L3.misses) %>% 
+     filter(df$test=='cache') %>%
+     group_by(size, threads,  optimization, compiler) %>%
+     summarize(m.L2=mean(L2.misses), m.L2.se=3*sd(L2.misses)/sqrt(n()), m.L3=mean(L3.misses), m.L3.se=3*sd(L3.misses)/sqrt(n())) %>%
+     as.data.frame()
+
+
+n <- inner_join(k,g)
+head(n)
+
+
+
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Joining, by = c("size", "threads", "optimization", "compiler")
+  size threads optimization compiler    m.time  m.time.se      m.L2
+1  512       1           O0      gcc 0.9629030 0.07202432 134772711
+2  512       1           O1      gcc 0.5266230 0.03676328 136072475
+3  512       1           O2      gcc 0.3069949 0.02263621 134961325
+4  512       1           O3      gcc 0.2998780 0.02087993 134951994
+5  512       2           O0      gcc 0.4992201 0.02836698 139113278
+6  512       2           O1      gcc 0.2736952 0.01925606 136085827
+       m.L2.se m.L3 m.L3.se
+1     7623.454    0       0
+2    78717.370    0       0
+3    15862.689    0       0
+4    13013.346    0       0
+5 13004653.685    0       0
+6    65651.034    0       0
+#+end_example
+
+
+
+There are a lot of factors and measures to analyze. Where to start?
