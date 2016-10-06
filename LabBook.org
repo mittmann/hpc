@@ -1656,8 +1656,8 @@ nslookup beagle1
 Then we send our DoE and code to beagle1
 
 #+begin_src bash :results output :session :exports both
-scp MM_Scenario_3.csv aulapinroot@143.54.12.87:~/arthur/exp
-scp mmv1.c aulapinroot@143.54.12.87:~/arthur/exp
+scp MM_Scenario_3.csv arthur.krause@143.54.12.87:~/mm3
+scp mmv1.c aulapinroot@143.54.12.87:~/arthur.krause/mm3
 #+end_src
 
 #+RESULTS:
@@ -1666,7 +1666,7 @@ scp mmv1.c aulapinroot@143.54.12.87:~/arthur/exp
 
 Now the test itself
 
- #+begin_src bash :results output :session :exports both :tangle scripts/test_mmv1_3.sh :dir /ssh:aulapinroot@143.54.12.87:~/arthur/exp
+ #+begin_src bash :results output :session :exports both :tangle scripts/test_mmv1_3.sh :dir /ssh:arthur.krause@143.54.12.87:~/mm3
 #!/bin/bash
 for i in `seq 0 3`
 do
@@ -1708,7 +1708,7 @@ rm -rf mmv1_clang_*
 Getting the output
 
 #+begin_src bash :results output :session :exports both
-scp aulapinroot@143.54.12.87:~/arthur/exp/MM_output_3.csv /data/MM_output_3.csv
+scp arthur.krause@143.54.12.87:~/mm3/MM_output_3.csv /data/MM_output_3.csv
 #+end_src
  
 
@@ -1769,3 +1769,10 @@ Joining, by = c("size", "threads", "optimization", "compiler")
 
 
 There are a lot of factors and measures to analyze. Where to start?
+
+Probably I will discard this and move on to the complete test with gcc
+and clang. This will be useful to check how worse the program compiled
+in turing will run in beagle1 in relation to the one compiled in the
+same machine.
+
+
