@@ -2080,7 +2080,6 @@ int main(int argc, char** argv)
 
 #+end_src
 
-
 ** DoE
 #+begin_src R :results output :session :exports both :tangle MM_Scenario_5.r
   require(DoE.base);
@@ -2167,6 +2166,155 @@ do
 	      echo "$f1,$f2,$f3,$f4,$f5,$f6,$f7,$f8,$f9" 
         fi
 done < MM_Scenario_5.csv > data/MM_output_5.csv
+#+end_src
+
+#+RESULTS:
+
+** Analysis
+#+begin_src R :results output graphics :file img/mm5.1.png :session *mm5* :exports both :width 1920 :height 1080
+
+library(dplyr)
+df <- read.csv("data/MM_output_5.csv");
+k <- df %>% select(size, threads, optimization, compiler, time) %>% 
+     group_by(size, threads,  optimization, compiler) %>%
+     summarize(m.time=mean(time), m.time.se=3*sd(time)/sqrt(n())) %>%
+     as.data.frame()
+
+
+library(ggplot2);
+ ggplot(k[k$size==1448,], aes(x=as.factor(threads), y=m.time, color=compiler)) +
+   theme_bw() +
+   geom_point() +
+   geom_errorbar(aes(ymin=m.time-m.time.se, ymax=m.time+m.time.se), width=.2) +
+   facet_grid(~optimization);
+
+
+#+end_src
+
+#+RESULTS:
+[[file:img/mm5.1.png]]
+
+This plot is only conclusive to show that the O3 optimization in 6.2.0
+brought a great performance gain comparing to other gcc versions, and
+its not due to a better OpenMP implementation because the sequential
+execution, which doesn't use OpenMP at all had an even more
+significant performance gain.
+
+
+#+begin_src R :results output :exports both :session *mm5* 
+require(quantmod)
+w <- k %>% filter(k$compiler == '5.1.0') %>% as.data.frame(); 
+x <- k %>% filter(k$compiler == '5.2.0') %>% as.data.frame();
+y <- k %>% filter(k$compiler == '5.3.0') %>% as.data.frame();
+z <- k %>% filter(k$compiler == '5.4.0') %>% as.data.frame();
+r <- k %>% select(size, threads, optimization) %>% filter(k$compiler == '5.1.0') %>% as.data.frame();
+
+r$one <- -((w$m.time - x$m.time)*100)/w$m.time;
+r$two <- -((x$m.time - y$m.time)*100)/x$m.time;
+r$three <- -((y$m.time - z$m.time)*100)/y$m.time;
+
+y <- k %>% filter(k$size == 1024) %>% as.data.frame();
+sum (y$m.time)
+#+end_src
+
+#+RESULTS:
+: [1] 1251.208
+
+As we can see in the data frame there were some performance
+regressions in the GCC 5 branch, but this needs to be better tested.
+
+
+
+
+* 2016-10-24 Focusing the test on the GCC 5 branch                   :Arthur: 
+The last test was too abrangent and took too long to run, so I will do
+this next test with more repetitions and only for 1024x1024 matrices
+in order to reduce the test time
+** DoE
+#+begin_src R :results output :session *mm6* :tangle MM_Scenario_6.r
+
+ require(DoE.base);
+  MM_Scenario_6 <- fac.design (
+           nfactors=3,
+           replications=20,
+           repeat.only=FALSE,
+           blocks=1,
+           randomize=TRUE,
+           seed=10373,
+           nlevels=c(6,4,4),
+           factor.names=list(
+                threads=c(1, 2, 4, 8, 16, 32),
+                optimization=c("O0", "O1", "O2", "O3"),
+                compiler=c("5.1.0","5.2.0","5.3.0","5.4.0")
+           ));
+
+  export.design(MM_Scenario_6,
+                path=".",
+                filename=NULL,
+                type="csv",
+                replace=TRUE,
+                response.names=c("time"));
+#+end_src
+
+#+RESULTS:
+:  creating full factorial with 96 runs ...
+
+** Test
+#+BEGIN_SRC sh :results output :session *a*
+until nslookup beagle1 > /dev/null; do :; done
+nslookup beagle1
+#+END_SRC
+
+#+RESULTS:
+: 
+: $ Server:		127.0.1.1
+: 53
+: 
+: Name:	beagle1.inf.ufrgs.br
+: Address: 143.54.12.87
+
+Sending the code and DoE to beagle1
+
+#+begin_src bash :results output :session :exports both
+scp MM_Scenario_6.csv arthur.krause@143.54.12.87:~/mm6
+scp mmv1.c arthur.krause@143.54.12.87:~/mm6
+scp mmv1_seq.c arthur.krause@143.54.12.87:~/mm6
+#+end_src
+
+#+RESULTS:
+
+
+#+begin_src bash :results output :session :exports both :tangle scripts/test_mmv1_6.sh :dir /ssh:arthur.krause@143.54.12.87:~/mm6
+#!/bin/bash
+for i in `seq 0 3`
+do
+    for j in 5.1.0 5.2.0 5.3.0 5.4.0
+	do
+	    ../compilers/gcc-$j -fopenmp -O$i mmv1.c
+	    mv a.out bin/mm_gcc-$j\_O$i
+
+	    ../compilers/gcc-$j -O$i -o bin/mm_seq_gcc-$j\_O$i mmv1_seq.c
+    done
+
+done
+while IFS="," read f1 f2 f3 f4 f5 f6 f7 f8 f9
+do
+        if [ "$f1" != "\"name\"" ]; then #if its not the first line
+                
+	          THREADS=${f5//\"/}                
+		  OPTIMIZATION=${f6//\"/}
+		  VERSION=${f7//\"/}
+		  if [ $THREADS != 1 ]; then
+		      TIME=$(./bin/mm_gcc-$VERSION\_$OPTIMIZATION $THREADS 1024)
+	          else
+		      TIME=$(./bin/mm_seq_gcc-$VERSION\_$OPTIMIZATION 1024)
+		  fi
+		      echo "$f1,$f2,$f3,$f4,$f5,$f6,$f7,$TIME"       
+        else 
+	      #if its the first line just repeat it
+	      echo "$f1,$f2,$f3,$f4,$f5,$f6,$f7,$f8" 
+        fi
+done < MM_Scenario_6.csv > data/MM_output_6.csv
 #+end_src
 
 #+RESULTS:
