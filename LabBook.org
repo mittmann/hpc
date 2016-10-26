@@ -2006,7 +2006,7 @@ experiment take only a few hours and not multiple days to complete,
 2048x2048 matrices won't be tested; and *Compiler Versions* as listed
 above.
 
-** sequential mm implementation
+** Sequential mm implementation
 
 #+begin_src C :results output :session :exports both :tangle mmv1.c
 #include <stdio.h>
@@ -2080,6 +2080,24 @@ int main(int argc, char** argv)
 
 #+end_src
 
+** Compilers instalation
+The different GCC versions were installed using Spack
+#+BEGIN_SRC sh :results output :session exports both :dir /ssh:beagle~/
+spack install gcc@4.9.4
+spack install gcc@5.1.0
+spack install gcc@5.2.0
+spack install gcc@5.3.0
+spack install gcc@5.4.0
+spack install gcc@6.2.0
+#+END_SRC
+
+Soft links for the executables were put in ~/compilers
+#+BEGIN_SRC sh :results output :session exports both :dir /ssh:beagle~/
+ls -l compilers
+#+END_SRC
+
+#+RESULTS:
+
 ** DoE
 #+begin_src R :results output :session :exports both :tangle MM_Scenario_5.r
   require(DoE.base);
@@ -2136,6 +2154,8 @@ scp mmv1_seq.c arthur.krause@143.54.12.87:~/mm5
 
 #+begin_src bash :results output :session :exports both :tangle scripts/test_mmv1_5.sh :dir /ssh:arthur.krause@143.54.12.87:~/mm5
 #!/bin/bash
+
+#compiles the program with different compilers and optimization levels
 for i in `seq 0 3`
 do
     for j in 4.9.4 5.1.0 5.2.0 5.3.0 5.4.0 6.2.0
@@ -2222,9 +2242,6 @@ sum (y$m.time)
 
 As we can see in the data frame there were some performance
 regressions in the GCC 5 branch, but this needs to be better tested.
-
-
-
 
 * 2016-10-24 Focusing the test on the GCC 5 branch                   :Arthur: 
 The last test was too abrangent and took too long to run, so I will do
