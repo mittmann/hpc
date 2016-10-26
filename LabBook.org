@@ -2223,9 +2223,6 @@ sum (y$m.time)
 As we can see in the data frame there were some performance
 regressions in the GCC 5 branch, but this needs to be better tested.
 
-
-
-
 * 2016-10-24 Focusing the test on the GCC 5 branch                   :Arthur: 
 The last test was too abrangent and took too long to run, so I will do
 this next test with more repetitions and only for 1024x1024 matrices
