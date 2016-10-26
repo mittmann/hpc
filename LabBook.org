@@ -2336,3 +2336,113 @@ done < MM_Scenario_6.csv > data/MM_output_6.csv
 
 #+RESULTS:
 
+* 2016-10-26 New look to the data ~MM_output_5.csv~                   :Lucas:
+** Experiment
+See the link below to understand how the experiment was conducted:
+- [[*2016-10-21 GCC Matrix Multiplication Performance Regression Test][2016-10-21 GCC Matrix Multiplication Performance Regression Test]]
+** Understand/summarize the data
+#+begin_src R :results output :session :exports both
+library(dplyr)
+df <- read.csv("data/MM_output_5.csv");
+dfk <- df %>% select(size, threads, optimization, compiler, time) %>% 
+     group_by(size, threads,  optimization, compiler) %>%
+     summarize(N=n(), m.time=mean(time), m.time.se=3*sd(time)/sqrt(n())) %>%
+     as.data.frame();
+head(dfk);
+summary(dfk);
+nrow(dfk);
+#+end_src
+
+#+RESULTS:
+#+begin_example
+  size threads optimization compiler  N    m.time    m.time.se
+1  512       1           O0    4.9.4 10 0.9247332 0.0055336409
+2  512       1           O0    5.1.0 10 0.8869819 0.0005567627
+3  512       1           O0    5.2.0 10 0.8864826 0.0003773593
+4  512       1           O0    5.3.0 10 0.8872129 0.0010723353
+5  512       1           O0    5.4.0 10 0.8866873 0.0003755769
+6  512       1           O0    6.2.0 10 0.8866870 0.0004175761
+      size         threads     optimization  compiler        N     
+ Min.   : 512   Min.   : 1.0   O0:144       4.9.4:96   Min.   :10  
+ 1st Qu.: 671   1st Qu.: 2.0   O1:144       5.1.0:96   1st Qu.:10  
+ Median : 874   Median : 6.0   O2:144       5.2.0:96   Median :10  
+ Mean   : 927   Mean   :10.5   O3:144       5.3.0:96   Mean   :10  
+ 3rd Qu.:1130   3rd Qu.:16.0                5.4.0:96   3rd Qu.:10  
+ Max.   :1448   Max.   :32.0                6.2.0:96   Max.   :10  
+     m.time          m.time.se        
+ Min.   : 0.0295   Min.   :0.0000721  
+ 1st Qu.: 0.7287   1st Qu.:0.0095767  
+ Median : 3.4530   Median :0.1134780  
+ Mean   : 9.4401   Mean   :0.2930919  
+ 3rd Qu.:11.1502   3rd Qu.:0.3739422  
+ Max.   :99.2315   Max.   :2.6035934
+[1] 576
+#+end_example
+** Plot
+#+begin_src R :results output graphics :file img/MM_output_5_time_per_version_for_32_threads.png :exports both :width 800 :height 800 :session
+library(ggplot2);
+ ggplot(k[k$threads == 32,], aes(x=compiler, y=m.time)) +
+     geom_point() +
+     geom_errorbar(aes(ymin=m.time-m.time.se, ymax=m.time+m.time.se), width=.2) +
+     ylim (0, NA) +
+     ylab ("Mean execution time [seconds]") +
+     xlab ("Compiler Version") +
+     theme_bw(base_size=28) +
+     theme (
+         legend.position = "top",
+         axis.text.x = element_text (angle=45, hjust=1, size=18)
+     ) +
+    facet_grid(size~optimization, scale="free_y");
+#+end_src
+
+#+RESULTS:
+[[file:img/MM_output_5_time_per_version_for_32_threads.png]]
+
+Conclusion: version 6.2.0 provides an important reduction with O3.
+** New DoEs (including clang)
+Please, install gcc and clang with spack from here:
+https://github.com/LLNL/spack
+*** GCC
+#+begin_src R :results output :session :exports both
+require(DoE.base);
+
+GCC_exp_0 <- fac.design (nfactors=4,
+                                            nlevels=c(4,6,7,4),
+                                            replications=10,
+                                            randomize=TRUE,
+                                            repeat.only=FALSE,
+                                            seed=10373, blocks=1,
+                                            factor.names=list( size=c(512, 724, 1024, 1448),
+                                                              threads=c(1, 2, 4, 8, 16, 32),
+                                                              version=c("4.9.4","5.1.0","5.2.0","5.3.0","5.4.0","6.1.0", "6.2.0"),
+                                                              optimization=c("O0", "O1", "O2", "O3")));
+
+export.design(GCC_exp_0, path="designs", filename=NULL, type="csv",
+              replace=TRUE, response.names=c("time"));
+#+end_src
+
+#+RESULTS:
+:  creating full factorial with 672 runs ...
+
+*** CLANG
+#+begin_src R :results output :session :exports both
+require(DoE.base);
+
+CLANG_exp_0 <- fac.design (nfactors=4,
+                                            nlevels=c(4,6,7,4),
+                                            replications=10,
+                                            randomize=TRUE,
+                                            repeat.only=FALSE,
+                                            seed=10373, blocks=1,
+                                            factor.names=list( size=c(512, 724, 1024, 1448),
+                                                              threads=c(1, 2, 4, 8, 16, 32),
+                                                              version=c("3.5.1", "3.6.2", "3.7.0", "3.7.1", "3.8.0", "3.8.1", "3.9.0"),
+                                                              optimization=c("O0", "O1", "O2", "O3")));
+
+export.design(CLANG_exp_0, path="designs", filename=NULL, type="csv",
+              replace=TRUE, response.names=c("time"));
+#+end_src
+
+#+RESULTS:
+:  creating full factorial with 672 runs ...
+
