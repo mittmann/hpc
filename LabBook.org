@@ -130,7 +130,7 @@ doubles.  It's size can be adjusted by modifying SIZE. Each column or
 row has SIZE elements. To test it yourself, start by tangling the MM
 code.
   
-#+begin_src C :results output :session :exports both :tangle mm.c
+#+begin_src C :results output :session :exports both :tangle no
 #Include <stdio.h>
 #include <stdlib.h>
 #include <omp.h>
@@ -334,7 +334,7 @@ In English:
 
 So, in R:
 
-#+begin_src R :results output :session *x*:exports both :tangle yes.r
+#+begin_src R :results output :session *x*:exports both :tangle no
   require(DoE.base);
   MM_Scenario <- fac.design (
            nfactors=2,
@@ -908,7 +908,7 @@ has double the number of elements) with 1, 2, 3, 4 and 8 threads (1
 still compiles as a parallel program but with only one thread) and
 running the version compiled with gcc or clang.
 
-#+begin_src R :results output :session :exports both :tangle MM_Scenario.r
+#+begin_src R :results output :session :exports both :tangle no
   require(DoE.base);
   MM_Scenario <- fac.design (
            nfactors=3,
@@ -956,7 +956,7 @@ The following object is masked from ‘package:base’:
 
 The following script runs the test scenario that R created:
 
-#+begin_src bash :results output :session :exports both :tangle scripts/test_mmv1_2.sh
+#+begin_src bash :results output :session :exports both :tangle no
 #!/bin/bash
 gcc -fopenmp -O3 mmv1.c
 mv a.out mmv1_gcc
@@ -1344,7 +1344,7 @@ optimization was the reason for the shorter execution time.
 But anyways, here is the DoE with size and optimization levels as
 factors:
 ** DoE
-#+begin_src R :results output :session :exports both :tangle MM_Scenario.r
+#+begin_src R :results output :session :exports both :tangle no
   require(DoE.base);
   MM_Scenario <- fac.design (
            nfactors=4,
@@ -1373,7 +1373,7 @@ factors:
 :  creating full factorial with 128 runs ...
 
 ** Script for testing
-#+begin_src bash :results output :session :exports both :tangle scripts/test_mmv1.sh
+#+begin_src bash :results output :session :exports both :tangle no
 #!/bin/bash
 gcc -fopenmp -O0 mmv1.c
 mv a.out mmv1_gcc_O0
@@ -1490,7 +1490,7 @@ ggplot(a, aes(x=as.factor(threads), y=mean, color=compiler, group=optimization))
  I couldn't do it. Could you help me, Lucas?
 
 * 2016-09-23 New DoE considering cache misses                        :Arthur: 
-#+begin_src R :results output :session :exports both :tangle MM_Scenario_2.r
+#+begin_src R :results output :session :exports both :tangle no
   require(DoE.base);
   MM_Scenario_2 <- fac.design (
            nfactors=4,
@@ -1606,7 +1606,7 @@ Since it's not possible to get the execution time while running the
 program through likwid, time and cache misses must be tested
 independently, so the test output will be a factor in the DoE
 
-#+begin_src R :results output :session :exports both :tangle MM_Scenario_3.r
+#+begin_src R :results output :session :exports both :tangle no
   require(DoE.base);
   MM_Scenario_3 <- fac.design (
            nfactors=5,
@@ -1666,7 +1666,7 @@ scp mmv1.c arthur.krause@143.54.12.87:~/mm3
 
 Now the test itself
 
- #+begin_src bash :results output :session :exports both :tangle scripts/test_mmv1_3.sh :dir /ssh:arthur.krause@143.54.12.87:~/mm3
+ #+begin_src bash :results output :session :exports both :tangle no :dir /ssh:arthur.krause@143.54.12.87:~/mm3
 #!/bin/bash
 for i in `seq 0 3`
 do
@@ -1822,7 +1822,7 @@ scp mmv1_clang_O* arthur.krause@143.54.12.87:~/mm4
 : 0     0.0KB/s   --:-- ETAmmv1_clang_O2                                 100%   13KB  13.1KB/s   00:00
 : 0     0.0KB/s   --:-- ETAmmv1_clang_O3                                 100%   13KB  13.1KB/s   00:00
 
-#+begin_src bash :results output :session :exports both :tangle scripts/test_mmv1_4.sh :dir /ssh:arthur.krause@143.54.12.87:~/mm4
+#+begin_src bash :results output :session :exports both :tangle no :dir /ssh:arthur.krause@143.54.12.87:~/mm4
 #!/bin/bash
 gcc -fopenmp -O0 mmv1.c
 mv a.out mmv1_gcc_O0
@@ -2008,7 +2008,7 @@ above.
 
 ** Sequential mm implementation
 
-#+begin_src C :results output :session :exports both :tangle mmv1.c
+#+begin_src C :results output :session :exports both :tangle no
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -2099,7 +2099,7 @@ ls -l compilers
 #+RESULTS:
 
 ** DoE
-#+begin_src R :results output :session :exports both :tangle MM_Scenario_5.r
+#+begin_src R :results output :session :exports both :tangle no
   require(DoE.base);
   MM_Scenario_5 <- fac.design (
            nfactors=4,
@@ -2152,7 +2152,7 @@ scp mmv1_seq.c arthur.krause@143.54.12.87:~/mm5
 #+RESULTS:
 
 
-#+begin_src bash :results output :session :exports both :tangle scripts/test_mmv1_5.sh :dir /ssh:arthur.krause@143.54.12.87:~/mm5
+#+begin_src bash :results output :session :exports both :tangle no :dir /ssh:arthur.krause@143.54.12.87:~/mm5
 #!/bin/bash
 
 #compiles the program with different compilers and optimization levels
@@ -2248,7 +2248,7 @@ The last test was too abrangent and took too long to run, so I will do
 this next test with more repetitions and only for 1024x1024 matrices
 in order to reduce the test time
 ** DoE
-#+begin_src R :results output :session *mm6* :tangle MM_Scenario_6.r
+#+begin_src R :results output :session *mm6* :tangle no
 
  require(DoE.base);
   MM_Scenario_6 <- fac.design (
@@ -2301,7 +2301,7 @@ scp mmv1_seq.c arthur.krause@143.54.12.87:~/mm6
 #+RESULTS:
 
 
-#+begin_src bash :results output :session :exports both :tangle scripts/test_mmv1_6.sh :dir /ssh:arthur.krause@143.54.12.87:~/mm6
+#+begin_src bash :results output :session :exports both :tangle no :dir /ssh:arthur.krause@143.54.12.87:~/mm6
 #!/bin/bash
 for i in `seq 0 3`
 do
@@ -2336,7 +2336,7 @@ done < MM_Scenario_6.csv > data/MM_output_6.csv
 
 #+RESULTS:
 
-* 2016-10-26 New look to the data ~MM_output_5.csv~                   :Lucas:
+* 2016-10-26 New look to the data ~MM_output_5.csv~                    :Lucas:
 ** Experiment
 See the link below to understand how the experiment was conducted:
 - [[*2016-10-21 GCC Matrix Multiplication Performance Regression Test][2016-10-21 GCC Matrix Multiplication Performance Regression Test]]
@@ -2446,3 +2446,148 @@ export.design(CLANG_exp_0, path="designs", filename=NULL, type="csv",
 #+RESULTS:
 :  creating full factorial with 672 runs ...
 
+* 2016-11-01 Compiler performance regression test GCC vs CLang       :Arthur:
+** Environment setup
+The compilers were installed using Spack
+(https://github.com/llnl/spack)
+
+$ spack install <compiler>@<version> gcc versions 4.5.3, 4.6.4, 4.7.3
+and 4.8.1 were already installed at /usr/bin
+
+Soft links to the binaries were added to $HOME/compilers
+
+#+begin_src bash :results output :session :exports both :dir /ssh:arthur.krause@turing:
+ls -l compilers
+#+end_src
+
+#+RESULTS:
+#+begin_example
+total 48
+lrwxrwxrwx 1 arthur.krause arthur.krause 125 Oct 26 20:16 clang-3.7.0 -> /home/arthur.krause/spack/opt/spack/linux-Ubuntu12-x86_64/gcc-5.4.0/llvm-3.7.0-x7hanudrpab5gdtwtuami23qbgcxwuqp/bin/clang-3.7
+lrwxrwxrwx 1 arthur.krause arthur.krause 125 Oct 26 20:17 clang-3.7.1 -> /home/arthur.krause/spack/opt/spack/linux-Ubuntu12-x86_64/gcc-5.4.0/llvm-3.7.1-ashxj3khxg57woyl5nyzdwfzkawwwgfh/bin/clang-3.7
+lrwxrwxrwx 1 arthur.krause arthur.krause 125 Oct 26 20:18 clang-3.8.0 -> /home/arthur.krause/spack/opt/spack/linux-Ubuntu12-x86_64/gcc-5.4.0/llvm-3.8.0-kkybsxmnyeb57lah7ewwsvspck7zaqgh/bin/clang-3.8
+lrwxrwxrwx 1 arthur.krause arthur.krause 125 Oct 26 20:19 clang-3.8.1 -> /home/arthur.krause/spack/opt/spack/linux-Ubuntu12-x86_64/gcc-5.4.0/llvm-3.8.1-gcpkhvg52hkc4efo7tnnlxm6x56i2xtx/bin/clang-3.8
+lrwxrwxrwx 1 arthur.krause arthur.krause 125 Oct 26 20:19 clang-3.9.0 -> /home/arthur.krause/spack/opt/spack/linux-Ubuntu12-x86_64/gcc-5.4.0/llvm-3.9.0-a5qj3lsvguveqem7hspq6fh32r6yvwpd/bin/clang-3.9
+lrwxrwxrwx 1 arthur.krause arthur.krause  16 Nov  1 10:33 gcc-4.5.3 -> /usr/bin/gcc-4.5
+lrwxrwxrwx 1 arthur.krause arthur.krause  16 Nov  1 10:34 gcc-4.6.4 -> /usr/bin/gcc-4.6
+lrwxrwxrwx 1 arthur.krause arthur.krause  16 Nov  1 10:34 gcc-4.7.3 -> /usr/bin/gcc-4.7
+lrwxrwxrwx 1 arthur.krause arthur.krause  16 Nov  1 10:35 gcc-4.8.1 -> /usr/bin/gcc-4.8
+lrwxrwxrwx 1 arthur.krause arthur.krause 118 Oct 26 20:16 gcc-4.9.4 -> /home/arthur.krause/spack/opt/spack/linux-Ubuntu12-x86_64/gcc-5.4.0/gcc-4.9.4-6q3xieqeddm4sp24tu5nc4ajsa5ub5i7/bin/gcc
+lrwxrwxrwx 1 arthur.krause arthur.krause 116 Oct 26 20:15 gcc-5.1.0 -> /home/arthur.krause/spack/opt/spack/linux-Ubuntu12-x86_64/gcc-4.8/gcc-5.1.0-7yexau7wrebs76g5b6oskseshc4b4jcj/bin/gcc
+lrwxrwxrwx 1 arthur.krause arthur.krause 116 Oct 26 20:15 gcc-5.2.0 -> /home/arthur.krause/spack/opt/spack/linux-Ubuntu12-x86_64/gcc-4.8/gcc-5.2.0-q3m2ghd7oxn2hh5fym4s6d3tak6kw5pj/bin/gcc
+lrwxrwxrwx 1 arthur.krause arthur.krause 116 Oct 27 13:01 gcc-5.3.0 -> /home/arthur.krause/spack/opt/spack/linux-Ubuntu12-x86_64/gcc-4.8/gcc-5.3.0-3tuujfkg6lubdmgdh452pvztfbpbrf2r/bin/gcc
+lrwxrwxrwx 1 arthur.krause arthur.krause 116 Oct 27 13:01 gcc-5.4.0 -> /home/arthur.krause/spack/opt/spack/linux-Ubuntu12-x86_64/gcc-4.8/gcc-5.4.0-4fhv22qhx434aw5busqlxoj5d3h73tcg/bin/gcc
+lrwxrwxrwx 1 arthur.krause arthur.krause 118 Oct 26 21:02 gcc-6.1.0 -> /home/arthur.krause/spack/opt/spack/linux-Ubuntu12-x86_64/gcc-5.4.0/gcc-6.1.0-lux7faf7ph2kk452cdohtgnnodwbccbf/bin/gcc
+lrwxrwxrwx 1 arthur.krause arthur.krause 118 Oct 27 13:02 gcc-6.2.0 -> /home/arthur.krause/spack/opt/spack/linux-Ubuntu12-x86_64/gcc-5.4.0/gcc-6.2.0-z6feplsql27yu3scdj7qkgv5j75wru7e/bin/gcc
+#+end_example
+
+** DoE
+#+begin_src R :results output :session :exports both
+
+ require(DoE.base);
+  perfreg <- fac.design (
+           nfactors=3,
+           replications=5,
+           repeat.only=FALSE,
+           blocks=1,
+           randomize=TRUE,
+           seed=10373,
+           nlevels=c(7,3,16),
+           factor.names=list(
+                threads=c(1, 2, 4, 8, 16, 32, 64),
+                optimization=c("O0", "O2", "O3"),
+                compiler=c("clang-3.7.0", "clang-3.7.1", "clang-3.8.0", "clang-3.8.1", "clang-3.9.0", "gcc-4.5.3", "gcc-4.6.4", "gcc-4.7.3", "gcc-4.8.1", "gcc-4.9.4", "gcc-5.1.0", "gcc-5.2.0","gcc-5.3.0","gcc-5.4.0", "gcc-6.1.0", "gcc-6.2.0")
+           ));
+
+  export.design(perfreg,
+                path="designs",
+                filename=NULL,
+                type="csv",
+                replace=TRUE,
+                response.names=c("time"));
+#+end_src
+
+#+RESULTS:
+:  creating full factorial with 336 runs ...
+
+** Test
+*** Compiling the different versions of the program
+
+#+begin_src bash :results output :session :exports both :dir /ssh:turing:~/exp/perfreg  
+DIR=/home/arthur.krause/compilers
+source ../../spack/share/spack/setup-env.sh
+for i in `ls $DIR`
+do
+if [[ $i =~ clang* ]]; then
+    VERSION=$(echo $i | cut -f2 -d "-")
+    LB="-Wl,-rpath,"$(spack location -i llvm@$VERSION)/lib""
+else
+    LB=""
+fi
+    for j in O0 O2 O3
+	do
+	    
+	     $DIR/$i -$j $LB -fopenmp src/mmv1.c -o bin/par_$i\_$j
+	     $DIR/$i -$j src/mmv1_seq.c -o bin/seq_$i\_$j
+	done
+done
+ls bin
+#+end_src
+
+#+RESULTS:
+#+begin_example
+par_clang-3.7.0_O0  par_gcc-4.8.1_O0  seq_clang-3.7.0_O0  seq_gcc-4.8.1_O0
+par_clang-3.7.0_O2  par_gcc-4.8.1_O2  seq_clang-3.7.0_O2  seq_gcc-4.8.1_O2
+par_clang-3.7.0_O3  par_gcc-4.8.1_O3  seq_clang-3.7.0_O3  seq_gcc-4.8.1_O3
+par_clang-3.7.1_O0  par_gcc-4.9.4_O0  seq_clang-3.7.1_O0  seq_gcc-4.9.4_O0
+par_clang-3.7.1_O2  par_gcc-4.9.4_O2  seq_clang-3.7.1_O2  seq_gcc-4.9.4_O2
+par_clang-3.7.1_O3  par_gcc-4.9.4_O3  seq_clang-3.7.1_O3  seq_gcc-4.9.4_O3
+par_clang-3.8.0_O0  par_gcc-5.1.0_O0  seq_clang-3.8.0_O0  seq_gcc-5.1.0_O0
+par_clang-3.8.0_O2  par_gcc-5.1.0_O2  seq_clang-3.8.0_O2  seq_gcc-5.1.0_O2
+par_clang-3.8.0_O3  par_gcc-5.1.0_O3  seq_clang-3.8.0_O3  seq_gcc-5.1.0_O3
+par_clang-3.8.1_O0  par_gcc-5.2.0_O0  seq_clang-3.8.1_O0  seq_gcc-5.2.0_O0
+par_clang-3.8.1_O2  par_gcc-5.2.0_O2  seq_clang-3.8.1_O2  seq_gcc-5.2.0_O2
+par_clang-3.8.1_O3  par_gcc-5.2.0_O3  seq_clang-3.8.1_O3  seq_gcc-5.2.0_O3
+par_clang-3.9.0_O0  par_gcc-5.3.0_O0  seq_clang-3.9.0_O0  seq_gcc-5.3.0_O0
+par_clang-3.9.0_O2  par_gcc-5.3.0_O2  seq_clang-3.9.0_O2  seq_gcc-5.3.0_O2
+par_clang-3.9.0_O3  par_gcc-5.3.0_O3  seq_clang-3.9.0_O3  seq_gcc-5.3.0_O3
+par_gcc-4.5.3_O0    par_gcc-5.4.0_O0  seq_gcc-4.5.3_O0	  seq_gcc-5.4.0_O0
+par_gcc-4.5.3_O2    par_gcc-5.4.0_O2  seq_gcc-4.5.3_O2	  seq_gcc-5.4.0_O2
+par_gcc-4.5.3_O3    par_gcc-5.4.0_O3  seq_gcc-4.5.3_O3	  seq_gcc-5.4.0_O3
+par_gcc-4.6.4_O0    par_gcc-6.1.0_O0  seq_gcc-4.6.4_O0	  seq_gcc-6.1.0_O0
+par_gcc-4.6.4_O2    par_gcc-6.1.0_O2  seq_gcc-4.6.4_O2	  seq_gcc-6.1.0_O2
+par_gcc-4.6.4_O3    par_gcc-6.1.0_O3  seq_gcc-4.6.4_O3	  seq_gcc-6.1.0_O3
+par_gcc-4.7.3_O0    par_gcc-6.2.0_O0  seq_gcc-4.7.3_O0	  seq_gcc-6.2.0_O0
+par_gcc-4.7.3_O2    par_gcc-6.2.0_O2  seq_gcc-4.7.3_O2	  seq_gcc-6.2.0_O2
+par_gcc-4.7.3_O3    par_gcc-6.2.0_O3  seq_gcc-4.7.3_O3	  seq_gcc-6.2.0_O3
+#+end_example
+
+*** Testing
+
+#+begin_src sh :results output :session :expors both
+scp designs/perfreg.csv turing:~/exp/perfreg
+#+end_src
+
+#+RESULTS:
+
+#+begin_src bash :results output :session :exports both :dir /ssh:turing:~/exp/perfreg  
+#!/bin/bash
+while IFS="," read f1 f2 f3 f4 f5 f6 f7 f8
+do
+        if [ "$f1" != "\"name\"" ]; then #if its not the first line
+                
+	          THREADS=${f5//\"/}                
+		  OPTIMIZATION=${f6//\"/}
+		  COMPILER=${f7//\"/}
+		  if [ $THREADS != 1 ]; then
+		      TIME=$(./bin/par_$COMPILER\_$OPTIMIZATION $THREADS 1300)
+	          else
+		      TIME=$(./bin/seq_$COMPILER\_$OPTIMIZATION 1300)
+		  fi
+		      echo "$f1,$f2,$f3,$f4,$f5,$f6,$f7,$TIME"       
+        else 
+	      #if its the first line just repeat it
+	      echo "$f1,$f2,$f3,$f4,$f5,$f6,$f7,$f8" 
+        fi
+done < perfreg.csv > data/perfreg_out.csv
+#+end_src
