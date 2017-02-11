@@ -2661,8 +2661,8 @@ mpirun -np 4 ./mpi_hello
 
 ** Ping Pong
 
-The code is taken from
-http://mpitutorial.com/tutorials/mpi-send-and-receive/
+The code as seen at
+https://github.com/wesleykendall/mpitutorial/blob/gh-pages/tutorials/mpi-send-and-receive/code/ping_pong.c
 
 #+BEGIN_SRC C :tangle codes/mpi_pingpong.c
 #include <mpi.h>
@@ -2706,6 +2706,78 @@ int main(int argc, char** argv) {
 }
 #+END_SRC
 
-#+begin_src sh :results output :exports both
-mpi
+Compile
+
+#+begin_src sh :results output :exports both :dir codes
+mpicc -o mpi_pingpong mpi_pingpong.c
 #+end_src
+
+#+RESULTS:
+
+Execute in 2 cores
+
+#+begin_src sh :results output :exports both :dir codes
+mpirun -np 2 ./mpi_pingpong
+#+end_src
+
+#+RESULTS:
+#+begin_example
+0 sent and incremented ping_pong_count 1 to 1
+1 received ping_pong_count 1 from 0
+0 received ping_pong_count 2 from 1
+1 sent and incremented ping_pong_count 2 to 0
+1 received ping_pong_count 3 from 0
+1 sent and incremented ping_pong_count 4 to 0
+0 sent and incremented ping_pong_count 3 to 1
+0 received ping_pong_count 4 from 1
+0 sent and incremented ping_pong_count 5 to 1
+0 received ping_pong_count 6 from 1
+0 sent and incremented ping_pong_count 7 to 1
+1 received ping_pong_count 5 from 0
+1 sent and incremented ping_pong_count 6 to 0
+1 received ping_pong_count 7 from 0
+1 sent and incremented ping_pong_count 8 to 0
+1 received ping_pong_count 9 from 0
+0 received ping_pong_count 8 from 1
+0 sent and incremented ping_pong_count 9 to 1
+0 received ping_pong_count 10 from 1
+1 sent and incremented ping_pong_count 10 to 0
+#+end_example
+
+* 2017-02-11 Installing PAPI and Score-P                             :Arthur:
+
+** PAPI
+
+#+begin_src sh :results output :exports both
+cd /tmp
+wget http://icl.cs.utk.edu/projects/papi/downloads/papi-5.5.0.tar.gz
+tar xvf papi-5.5.0.tar.gz
+cd papi-5.5.0/src/
+./configure
+make
+sudo make install
+#+end_src
+
+Verificamos que a instalação foi bem-sucedida com:
+
+#+begin_src sh :results output :exports both
+ls /usr/local/lib/ | grep -i papi
+#+end_src
+
+** Score-P
+
+#+begin_src sh :results output :exports both
+cd /tmp
+wget http://www.vi-hps.org/upload/packages/scorep/scorep-3.0.tar.gz
+tar vxf scorep-3.0.tar.gz
+cd scorep-3.0/
+mkdir build/
+#for mpich3, if using openMPI, change the --with-mpi= part
+./configure --prefix=$HOME/Programs/scorep-3.0/build/ --enable-papi --with-papi-lib=/usr/local/lib/ --with-papi-header=/usr/local/include/ --with-mpi=mpich3 --without-gui --without-shmen
+make -j4 
+sudo make install 
+sed -i '1iexport PATH=$HOME/Programs/scorep-3.0/build/bin:$PATH' ~/.bashrc
+sed -i '1iexport LD_LIBRARY_PATH=$HOME/Programs/scorep-3.0/build/lib:$LD_LIBRARY_PATH'  ~/.bashrc
+#+end_src
+
+
