@@ -2595,16 +2595,8 @@ done < perfreg.csv > data/perfreg_out.csv
 * 2017-01-28 Getting introduced to MPI                               :Arthur:
 
 The tutorial found on
-http://mpitutorial.com/tutorials/mpi-hello-world/ will be used.
+http://mpitutorial.com/ will be used.
 
-First I need to clone the repository containing the files used in this
-tutorial.
-
-#+begin_src sh :results output :exports both
-git clone https://github.com/wesleykendall/mpitutorial ../mpitutorial
-#+end_src
-
-#+RESULTS:
 
 ** Hello World
 
