@@ -719,7 +719,7 @@ This is the code from 2016-07-19 with the following modifications:
     - rand() is now replaced by fastrand() as the professor requested.
     - the matrix size is now a parameter received from the command line
 
-#+begin_src C :results output :session :exports both :tangle mmv1.c
+#+begin_src C :results output :session :exports both :tangle no
     
 #include <stdio.h>
 #include <stdlib.h>
@@ -2597,8 +2597,23 @@ done < perfreg.csv > data/perfreg_out.csv
 The tutorial found on
 http://mpitutorial.com/tutorials/mpi-hello-world/ will be used.
 
+First I need to clone the repository containing the files used in this
+tutorial.
+
+#+begin_src sh :results output :exports both
+git clone https://github.com/wesleykendall/mpitutorial ../mpitutorial
+#+end_src
+
+#+RESULTS:
+
 ** Hello World
-#+begin_src C :results output :exports both :session *mpi* : tangle mpi_hello.c 
+
+
+
+First, tangle the hello world code below
+kefile
+: mpi_hello_world.c
+#+begin_src C :results output :exports both :tangle codes/mpi_hello.c
 #include <mpi.h>
 #include <stdio.h>
 
@@ -2629,5 +2644,25 @@ int main(int argc, char** argv) {
 }
 #+end_src
 
+
+Compile the code
+
+#+begin_src sh :results output :exports both :dir codes
+mpicc -o mpi_hello mpi_hello.c
+#+end_src
+
+
 #+RESULTS:
+
+Then, run locally using mpirun, in this case with 4 processes
+
+#+begin_src sh :results output :exports both :dir codes
+mpirun -np 4 ./mpi_hello
+#+end_src
+
+#+RESULTS:
+: Hello world from processor ana, rank 2 out of 4 processors
+: Hello world from processor ana, rank 0 out of 4 processors
+: Hello world from processor ana, rank 3 out of 4 processors
+: Hello world from processor ana, rank 1 out of 4 processors
 
