@@ -2744,7 +2744,7 @@ mpirun -np 2 ./mpi_pingpong
 1 sent and incremented ping_pong_count 10 to 0
 #+end_example
 
-* 2017-02-11 Installing PAPI and Score-P                             :Arthur:
+* 2017-02-11 Installing PAPI, Score-P                                :Arthur:
 
 ** PAPI
 
@@ -2780,4 +2780,71 @@ sed -i '1iexport PATH=$HOME/Programs/scorep-3.0/build/bin:$PATH' ~/.bashrc
 sed -i '1iexport LD_LIBRARY_PATH=$HOME/Programs/scorep-3.0/build/lib:$LD_LIBRARY_PATH'  ~/.bashrc
 #+end_src
 
+* 2017-02-11 Tracing MPI ping pong                                   :Arthur: 
+
+Intrumentation
+#+begin_src sh :results output :exports both :dir codes
+scorep mpicc -o mpi_pingpong_scorep mpi_pingpong.c
+#+end_src
+
+Execution
+#+begin_src sh :results output :exports both :dir codes
+rm -rf ../data/mpi_pingpong
+export SCOREP_ENABLE_PROFILING=true 
+export SCOREP_ENABLE_TRACING=true 
+export SCOREP_TOTAL_MEMORY=3G 
+export SCOREP_METRIC_PAPI=PAPI_L2_TCA,PAPI_L2_DCM 
+export SCOREP_METRIC_RUSAGE=ru_utime,ru_stime
+export SCOREP_EXPERIMENT_DIRECTORY=../data/mpi_pingpong
+mpirun -np 2 ./mpi_pingpong_scorep
+#+end_src
+
+#+RESULTS:
+#+begin_example
+0 sent and incremented ping_pong_count 1 to 1
+0 received ping_pong_count 2 from 1
+1 received ping_pong_count 1 from 0
+1 sent and incremented ping_pong_count 2 to 0
+1 received ping_pong_count 3 from 0
+1 sent and incremented ping_pong_count 4 to 0
+0 sent and incremented ping_pong_count 3 to 1
+0 received ping_pong_count 4 from 1
+0 sent and incremented ping_pong_count 5 to 1
+1 received ping_pong_count 5 from 0
+0 received ping_pong_count 6 from 1
+1 sent and incremented ping_pong_count 6 to 0
+0 sent and incremented ping_pong_count 7 to 1
+1 received ping_pong_count 7 from 0
+0 received ping_pong_count 8 from 1
+1 sent and incremented ping_pong_count 8 to 0
+0 sent and incremented ping_pong_count 9 to 1
+1 received ping_pong_count 9 from 0
+1 sent and incremented ping_pong_count 10 to 0
+0 received ping_pong_count 10 from 1
+rank[0]:	 frequency = 2394465400/s 
+rank[1]:	 frequency = 2394471583/s 
+#+end_example
+
+Assuming akypuera is installed and otf22paje was enabled upon
+installation (see
+https://github.com/schnorr/akypuera/wiki/OTF2WithAkypuera)
+
+Converting to paje format
+#+begin_src sh :results output :exports both
+otf22paje data/mpi_pingpong/traces.otf2 > data/mpi_pingpong/traces.paje
+#+end_src
+
+#+RESULTS:
+
+Using pajeng to view the data as a csv
+#+begin_src sh :results output :exports both :dir data/mpi_pingpong
+pj_dump traces.paje > traces_rep.csv
+#+end_src
+
+#+begin_src sh :results output :exports both
+less data/mpi_pingpong/traces.csv
+#+end_src
+
+#+RESULTS:
+: PajeDecodeException: Event with id '-1342816216' has not been defined in (Line: 5, Fields: 4, Contents: '-1342816216 machine 0 machine')
 
