@@ -2886,3 +2886,198 @@ State, MPI Rank 0, STATE, 0.015024, 0.015027, 0.000003, 1.000000, MPI_Recv
 State, MPI Rank 0, STATE, 0.015030, 0.015039, 0.000009, 1.000000, MPI_Finalize
 #+end_example
 
+* 2017-02-13 Visualization of ping-pong traces                        :Lucas:
+** Understanding the CSV file
+
+Check here to understand the contents of the CSV file:
+https://github.com/schnorr/pajeng/wiki/pj_dump
+
+#+begin_src shell :results output
+cat $(find data/mpi_pingpong/ | grep csv$)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Container, 0, 0, 0, 0.015042, 0.015042, 0
+Container, 0, machine, 0, 0.015042, 0.015042, Linux
+Container, Linux, node, 0, 0.015042, 0.015042, ana
+Container, ana, P, 0, 0.015042, 0.015042, MPI Rank 1
+State, MPI Rank 1, STATE, 0.000000, 0.015042, 0.015042, 0.000000, main
+State, MPI Rank 1, STATE, 0.000009, 0.014931, 0.014922, 1.000000, MPI_Init
+State, MPI Rank 1, STATE, 0.014939, 0.014943, 0.000004, 1.000000, MPI_Comm_rank
+State, MPI Rank 1, STATE, 0.014945, 0.014947, 0.000002, 1.000000, MPI_Comm_size
+State, MPI Rank 1, STATE, 0.014948, 0.014956, 0.000008, 1.000000, MPI_Recv
+State, MPI Rank 1, STATE, 0.014966, 0.014979, 0.000013, 1.000000, MPI_Send
+State, MPI Rank 1, STATE, 0.014982, 0.014988, 0.000005, 1.000000, MPI_Recv
+State, MPI Rank 1, STATE, 0.014991, 0.014993, 0.000002, 1.000000, MPI_Send
+State, MPI Rank 1, STATE, 0.014996, 0.014999, 0.000004, 1.000000, MPI_Recv
+State, MPI Rank 1, STATE, 0.015002, 0.015004, 0.000002, 1.000000, MPI_Send
+State, MPI Rank 1, STATE, 0.015007, 0.015010, 0.000003, 1.000000, MPI_Recv
+State, MPI Rank 1, STATE, 0.015013, 0.015015, 0.000002, 1.000000, MPI_Send
+State, MPI Rank 1, STATE, 0.015018, 0.015022, 0.000003, 1.000000, MPI_Recv
+State, MPI Rank 1, STATE, 0.015024, 0.015027, 0.000002, 1.000000, MPI_Send
+State, MPI Rank 1, STATE, 0.015029, 0.015040, 0.000010, 1.000000, MPI_Finalize
+Container, ana, P, 0, 0.015042, 0.015042, MPI Rank 0
+State, MPI Rank 0, STATE, 0.010489, 0.015042, 0.004553, 0.000000, main
+State, MPI Rank 0, STATE, 0.010497, 0.014924, 0.004427, 1.000000, MPI_Init
+State, MPI Rank 0, STATE, 0.014939, 0.014943, 0.000004, 1.000000, MPI_Comm_rank
+State, MPI Rank 0, STATE, 0.014945, 0.014946, 0.000002, 1.000000, MPI_Comm_size
+State, MPI Rank 0, STATE, 0.014948, 0.014953, 0.000005, 1.000000, MPI_Send
+State, MPI Rank 0, STATE, 0.014965, 0.014981, 0.000015, 1.000000, MPI_Recv
+State, MPI Rank 0, STATE, 0.014984, 0.014987, 0.000002, 1.000000, MPI_Send
+State, MPI Rank 0, STATE, 0.014990, 0.014993, 0.000004, 1.000000, MPI_Recv
+State, MPI Rank 0, STATE, 0.014996, 0.014999, 0.000002, 1.000000, MPI_Send
+State, MPI Rank 0, STATE, 0.015001, 0.015005, 0.000003, 1.000000, MPI_Recv
+State, MPI Rank 0, STATE, 0.015008, 0.015010, 0.000002, 1.000000, MPI_Send
+State, MPI Rank 0, STATE, 0.015013, 0.015016, 0.000003, 1.000000, MPI_Recv
+State, MPI Rank 0, STATE, 0.015019, 0.015021, 0.000002, 1.000000, MPI_Send
+State, MPI Rank 0, STATE, 0.015024, 0.015027, 0.000003, 1.000000, MPI_Recv
+State, MPI Rank 0, STATE, 0.015030, 0.015039, 0.000009, 1.000000, MPI_Finalize
+#+end_example
+
+We need only those lines starting with *State*, since they indicate the
+behavior of each MPI rank along time. Let's get only those lines
+then, saving to a temporary file.
+
+#+begin_src shell :results output
+cat $(find data/mpi_pingpong/ | grep csv$) | grep ^State > /tmp/tempfile.csv
+cat /tmp/tempfile.csv
+#+end_src
+
+#+RESULTS:
+#+begin_example
+State, MPI Rank 1, STATE, 0.000000, 0.015042, 0.015042, 0.000000, main
+State, MPI Rank 1, STATE, 0.000009, 0.014931, 0.014922, 1.000000, MPI_Init
+State, MPI Rank 1, STATE, 0.014939, 0.014943, 0.000004, 1.000000, MPI_Comm_rank
+State, MPI Rank 1, STATE, 0.014945, 0.014947, 0.000002, 1.000000, MPI_Comm_size
+State, MPI Rank 1, STATE, 0.014948, 0.014956, 0.000008, 1.000000, MPI_Recv
+State, MPI Rank 1, STATE, 0.014966, 0.014979, 0.000013, 1.000000, MPI_Send
+State, MPI Rank 1, STATE, 0.014982, 0.014988, 0.000005, 1.000000, MPI_Recv
+State, MPI Rank 1, STATE, 0.014991, 0.014993, 0.000002, 1.000000, MPI_Send
+State, MPI Rank 1, STATE, 0.014996, 0.014999, 0.000004, 1.000000, MPI_Recv
+State, MPI Rank 1, STATE, 0.015002, 0.015004, 0.000002, 1.000000, MPI_Send
+State, MPI Rank 1, STATE, 0.015007, 0.015010, 0.000003, 1.000000, MPI_Recv
+State, MPI Rank 1, STATE, 0.015013, 0.015015, 0.000002, 1.000000, MPI_Send
+State, MPI Rank 1, STATE, 0.015018, 0.015022, 0.000003, 1.000000, MPI_Recv
+State, MPI Rank 1, STATE, 0.015024, 0.015027, 0.000002, 1.000000, MPI_Send
+State, MPI Rank 1, STATE, 0.015029, 0.015040, 0.000010, 1.000000, MPI_Finalize
+State, MPI Rank 0, STATE, 0.010489, 0.015042, 0.004553, 0.000000, main
+State, MPI Rank 0, STATE, 0.010497, 0.014924, 0.004427, 1.000000, MPI_Init
+State, MPI Rank 0, STATE, 0.014939, 0.014943, 0.000004, 1.000000, MPI_Comm_rank
+State, MPI Rank 0, STATE, 0.014945, 0.014946, 0.000002, 1.000000, MPI_Comm_size
+State, MPI Rank 0, STATE, 0.014948, 0.014953, 0.000005, 1.000000, MPI_Send
+State, MPI Rank 0, STATE, 0.014965, 0.014981, 0.000015, 1.000000, MPI_Recv
+State, MPI Rank 0, STATE, 0.014984, 0.014987, 0.000002, 1.000000, MPI_Send
+State, MPI Rank 0, STATE, 0.014990, 0.014993, 0.000004, 1.000000, MPI_Recv
+State, MPI Rank 0, STATE, 0.014996, 0.014999, 0.000002, 1.000000, MPI_Send
+State, MPI Rank 0, STATE, 0.015001, 0.015005, 0.000003, 1.000000, MPI_Recv
+State, MPI Rank 0, STATE, 0.015008, 0.015010, 0.000002, 1.000000, MPI_Send
+State, MPI Rank 0, STATE, 0.015013, 0.015016, 0.000003, 1.000000, MPI_Recv
+State, MPI Rank 0, STATE, 0.015019, 0.015021, 0.000002, 1.000000, MPI_Send
+State, MPI Rank 0, STATE, 0.015024, 0.015027, 0.000003, 1.000000, MPI_Recv
+State, MPI Rank 0, STATE, 0.015030, 0.015039, 0.000009, 1.000000, MPI_Finalize
+#+end_example
+** Read data into R
+#+begin_src R :results output :session :exports both
+df <- read.csv("/tmp/tempfile.csv", header=FALSE, strip.white=TRUE);
+names(df) <- c("Nature", "Rank", "Type", "Start", "End", "Duration", "Imbrication", "Value");
+head(df);
+#+end_src
+
+#+RESULTS:
+:   Nature       Rank  Type    Start      End Duration Imbrication         Value
+: 1  State MPI Rank 1 STATE 0.000000 0.015042 0.015042           0          main
+: 2  State MPI Rank 1 STATE 0.000009 0.014931 0.014922           1      MPI_Init
+: 3  State MPI Rank 1 STATE 0.014939 0.014943 0.000004           1 MPI_Comm_rank
+: 4  State MPI Rank 1 STATE 0.014945 0.014947 0.000002           1 MPI_Comm_size
+: 5  State MPI Rank 1 STATE 0.014948 0.014956 0.000008           1      MPI_Recv
+: 6  State MPI Rank 1 STATE 0.014966 0.014979 0.000013           1      MPI_Send
+
+Only the Rank, Start, End and Value are of interest for us. Let's use
+_dplyr_ verbs to select only those columns. Since Rank is a number,
+let's wipe out the "MPI Rank" character of all values of the _Rank_
+column, transforming it to integer. We also want to keep only MPI
+states.
+#+begin_src R :results output :session :exports both
+library(dplyr);
+df <- df %>%
+    filter(grepl("MPI_", Value)) %>%
+    select(Rank, Start, End, Value) %>%
+    mutate(Rank = as.integer(gsub("MPI Rank ", "", Rank)));
+head(df);
+#+end_src
+
+#+RESULTS:
+:   Rank    Start      End         Value
+: 1    1 0.000009 0.014931      MPI_Init
+: 2    1 0.014939 0.014943 MPI_Comm_rank
+: 3    1 0.014945 0.014947 MPI_Comm_size
+: 4    1 0.014948 0.014956      MPI_Recv
+: 5    1 0.014966 0.014979      MPI_Send
+: 6    1 0.014982 0.014988      MPI_Recv
+
+Great, let's check the types of each column:
+#+begin_src R :results output :session :exports both
+sapply(df, class);
+#+end_src
+
+#+RESULTS:
+:      Rank     Start       End     Value 
+: "integer" "numeric" "numeric"  "factor"
+
+Perfect, let's move on.
+** Plot
+Let's use ggplot2.
+#+begin_src R :results output graphics :file img/ping-pong-along-time_001.png :exports both :width 600 :height 200 :session
+library(ggplot2);
+df %>% ggplot() +
+    theme_bw(base_size=12) +
+    xlab("Time [s]") +
+    ylab("Rank") +
+    scale_fill_brewer(palette = "Set1") +
+    theme (
+#        plot.margin = unit(c(0,0,0,0), "cm"),
+#        legend.margin = unit(.1, "line"),
+        legend.position = "top",
+        legend.title = element_blank()) +
+    guides(fill = guide_legend(nrow = 1)) +
+    geom_rect(aes(fill=Value,
+                  xmin=Start,
+                  xmax=End,
+                  ymin=Rank,
+                  ymax=Rank+0.9));
+#+end_src
+
+#+RESULTS:
+[[file:img/ping-pong-along-time_001.png]]
+
+We can see that most of the time the two ranks are in the =MPI_Init=
+(violet color). So, What we could do instead is to remove this state
+and take a look only to the others.
+
+#+begin_src R :results output graphics :file img/ping-pong-along-time_002.png :exports both :width 600 :height 200 :session
+library(ggplot2);
+df %>% filter(Value != "MPI_Init") %>% ggplot() +
+    theme_bw(base_size=12) +
+    xlab("Time [s]") +
+    ylab("Rank") +
+    scale_fill_brewer(palette = "Set1") +
+    theme (
+#        plot.margin = unit(c(0,0,0,0), "cm"),
+#        legend.margin = unit(.1, "line"),
+        legend.position = "top",
+        legend.title = element_blank()) +
+    guides(fill = guide_legend(nrow = 1)) +
+    geom_rect(aes(fill=Value,
+                  xmin=Start,
+                  xmax=End,
+                  ymin=Rank,
+                  ymax=Rank+0.9));
+#+end_src
+
+#+RESULTS:
+[[file:img/ping-pong-along-time_002.png]]
+
+Much more interesting now, we can even see the ping pong effect. The
+white gaps can be considered computation. See how heteronegeous are
+the durations of each operation.
