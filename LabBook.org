@@ -3081,3 +3081,183 @@ df %>% filter(Value != "MPI_Init") %>% ggplot() +
 Much more interesting now, we can even see the ping pong effect. The
 white gaps can be considered computation. See how heteronegeous are
 the durations of each operation.
+
+* 2017-03-06 Tracing MPI random walk                                 :Arthur:
+ 
+ Explanation about the code can be found at
+ http://mpitutorial.com/tutorials/point-to-point-communication-application-random-walk/
+
+
+
+
+Instrumentation
+#+begin_src sh :results output :exports both :dir codes
+scorep mpicxx -o random_walk random_walk.cc
+#+end_src
+
+#+RESULTS:
+
+Execution with a domain size of 500, maximum walk of 5000 and 50
+walkers per process
+
+#+begin_src sh :results output :exports both :dir codes
+rm -rf ../data/mpi_randomwalk
+export SCOREP_ENABLE_PROFILING=true 
+export SCOREP_ENABLE_TRACING=true 
+export SCOREP_TOTAL_MEMORY=3G 
+export SCOREP_METRIC_PAPI=PAPI_L2_TCA,PAPI_L2_DCM 
+export SCOREP_METRIC_RUSAGE=ru_utime,ru_stime
+export SCOREP_EXPERIMENT_DIRECTORY=../data/mpi_randomwalk
+mpirun -np 4 ./random_walk 500 5000 50 > randomwalk_execution
+#+end_src
+
+#+RESULTS:
+
+
+Converting to paje format
+#+begin_src sh :results output :exports both :dir data/mpi_randomwalk
+otf22paje traces.otf2 > traces.paje
+#+end_src
+
+#+RESULTS:
+
+Using pajeng to view the data as a csv
+#+begin_src sh :results output :exports both :dir data/mpi_randomwalk
+pj_dump traces.paje > traces.csv
+#+end_src
+
+#+RESULTS:
+
+#+begin_src sh :results output :exports both
+head data/mpi_randomwalk/traces.csv
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Container, 0, 0, 0, 0.0675657, 0.0675657, 0
+Container, 0, machine, 0, 0.0675657, 0.0675657, Linux
+Container, Linux, node, 0, 0.0675657, 0.0675657, ana
+Container, ana, P, 0, 0.0675657, 0.0675657, MPI Rank 3
+State, MPI Rank 3, STATE, 0.003067, 0.003243, 0.000175, 0.000000, _GLOBAL__sub_I__Z16decompose_domainiiiPiS_
+State, MPI Rank 3, STATE, 0.003085, 0.003237, 0.000152, 1.000000, _Z41__static_initialization_and_destruction_0ii
+State, MPI Rank 3, STATE, 0.003248, 0.067566, 0.064318, 0.000000, main
+State, MPI Rank 3, STATE, 0.003254, 0.013787, 0.010533, 1.000000, MPI_Init
+State, MPI Rank 3, STATE, 0.013796, 0.013799, 0.000003, 1.000000, MPI_Comm_size
+State, MPI Rank 3, STATE, 0.013800, 0.013802, 0.000002, 1.000000, MPI_Comm_rank
+#+end_example
+
+* 2017-03-06 Visualizing the random walk traces                      :Arthur:
+Doing exactly the same process done for the MPI ping-pong:
+
+#+begin_src shell :results output
+cat $(find data/mpi_randomwalk/ | grep csv$) | grep ^State > /tmp/tempfile.csv
+#+end_src
+
+#+RESULTS:
+
+#+begin_src R :results output :session :exports both
+df <- read.csv("/tmp/tempfile.csv", header=FALSE, strip.white=TRUE);
+names(df) <- c("Nature", "Rank", "Type", "Start", "End", "Duration", "Imbrication", "Value");
+head(df);
+#+end_src
+
+#+RESULTS:
+#+begin_example
+  Nature       Rank  Type    Start      End Duration Imbrication
+1  State MPI Rank 3 STATE 0.003067 0.003243 0.000175           0
+2  State MPI Rank 3 STATE 0.003085 0.003237 0.000152           1
+3  State MPI Rank 3 STATE 0.003248 0.067566 0.064318           0
+4  State MPI Rank 3 STATE 0.003254 0.013787 0.010533           1
+5  State MPI Rank 3 STATE 0.013796 0.013799 0.000003           1
+6  State MPI Rank 3 STATE 0.013800 0.013802 0.000002           1
+                                            Value
+1      _GLOBAL__sub_I__Z16decompose_domainiiiPiS_
+2 _Z41__static_initialization_and_destruction_0ii
+3                                            main
+4                                        MPI_Init
+5                                   MPI_Comm_size
+6                                   MPI_Comm_rank
+#+end_example
+
+#+begin_src R :results output :session :exports both
+library(dplyr);
+df <- df %>%
+    filter(grepl("MPI_", Value)) %>%
+    select(Rank, Start, End, Value) %>%
+    mutate(Rank = as.integer(gsub("MPI Rank ", "", Rank)));
+head(df);
+#+end_src
+
+#+RESULTS:
+:   Rank    Start      End         Value
+: 1    3 0.003254 0.013787      MPI_Init
+: 2    3 0.013796 0.013799 MPI_Comm_size
+: 3    3 0.013800 0.013802 MPI_Comm_rank
+: 4    3 0.019602 0.019850     MPI_Probe
+: 5    3 0.019878 0.019882      MPI_Recv
+: 6    3 0.019900 0.019904      MPI_Send
+
+
+
+Let's use ggplot2.
+#+begin_src R :results output graphics :file img/randomwalk-along-time_001.png :exports both :width 800 :height 200 :session
+library(ggplot2);
+df %>% ggplot() +
+    theme_bw(base_size=12) +
+    xlab("Time [s]") +
+    ylab("Rank") +
+    scale_fill_brewer(palette = "Set1") +
+    theme (
+#        plot.margin = unit(c(0,0,0,0), "cm"),
+#        legend.margin = unit(.1, "line"),
+        legend.position = "top",
+        legend.title = element_blank()) +
+    guides(fill = guide_legend(nrow = 1)) +
+    geom_rect(aes(fill=Value,
+                  xmin=Start,
+                  xmax=End,
+                  ymin=Rank,
+                  ymax=Rank+0.9));
+#+end_src
+
+#+RESULTS:
+[[file:img/randomwalk-along-time_001.png]]
+
+Unlike the MPI ping-pong, this execution was long enough so that the
+time spent on =MPI_Init= did not overshadow the rest of the
+execution. We can remove it from the plot anyways to get a better
+visualization of the actual random walking.
+
+#+begin_src R :results output graphics :file img/randomwalk-along-time_002.png :exports both :width 800 :height 200 :session
+library(ggplot2);
+df %>% filter(Value != "MPI_Init") %>% ggplot() +
+    theme_bw(base_size=12) +
+    xlab("Time [s]") +
+    ylab("Rank") +
+    scale_fill_brewer(palette = "Set1") +
+    theme (
+#        plot.margin = unit(c(0,0,0,0), "cm"),
+#        legend.margin = unit(.1, "line"),
+        legend.position = "top",
+        legend.title = element_blank()) +
+    guides(fill = guide_legend(nrow = 1)) +
+    geom_rect(aes(fill=Value,
+                  xmin=Start,
+                  xmax=End,
+                  ymin=Rank,
+                  ymax=Rank+0.9));
+#+end_src
+
+#+RESULTS:
+[[file:img/randomwalk-along-time_002.png]]
+
+From this we can observe that most of the time is spent either waiting
+for a walkers list to arrive (=MPI_Probe=) or doing computation (blank
+spaces). We can also see that the communication/computation ratio
+increases with time as there are less walkers to process.
+
+Some huge gaps that can be observed in rank 1 for example make no
+sense to me. I suppose it has something to do with the scheduling. I
+don't know yet if a trace shows the actual time or the time that each rank
+has the CPU for itself. I will try to run it in a machine with more
+cores and using no SMT to find out.
